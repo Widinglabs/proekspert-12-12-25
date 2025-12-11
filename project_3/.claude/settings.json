@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/rasmus/Projects/workshops/workshop-materials/project_3/.claude/hooks/system_notification.py --notify"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/rasmus/Projects/workshops/workshop-materials/project_3/.claude/hooks/system_notification.py --notify"
+          }
+        ]
+      }
+    ]
+  }
+}
