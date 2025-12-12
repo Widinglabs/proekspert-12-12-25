@@ -65,7 +65,7 @@ def test_product_objects_have_required_fields(test_client: TestClient) -> None:
     - product_description
     - product_price_usd
     - product_category
-    - product_in_stock
+    - product_stock_quantity
     """
     response = test_client.get("/api/products")
     data = response.json()
@@ -81,7 +81,7 @@ def test_product_objects_have_required_fields(test_client: TestClient) -> None:
         "product_description",
         "product_price_usd",
         "product_category",
-        "product_in_stock",
+        "product_stock_quantity",
     ]
 
     for field in required_fields:

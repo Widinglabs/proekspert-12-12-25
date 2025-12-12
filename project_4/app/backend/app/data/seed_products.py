@@ -15,8 +15,8 @@ def get_seed_products() -> list[Product]:
     Return a list of 30 sample products for the catalog.
 
     The products are diverse across all five categories (electronics, clothing,
-    home, sports, books) with a range of prices. Some products are marked as
-    out of stock to test filtering edge cases.
+    home, sports, books) with a range of prices. Stock quantities vary to demonstrate
+    different states: out of stock (0), low stock (1-5), and normal stock (6+).
 
     Returns:
         List of Product objects ready to use in the API
@@ -36,7 +36,7 @@ def get_seed_products() -> list[Product]:
             product_description="Ergonomic wireless mouse with 2.4GHz USB receiver and long-lasting battery life",
             product_price_usd=Decimal("29.99"),
             product_category="electronics",
-            product_in_stock=True,
+            product_stock_quantity=23,
         ),
         Product(
             product_id=2,
@@ -44,7 +44,7 @@ def get_seed_products() -> list[Product]:
             product_description="RGB backlit mechanical keyboard with blue switches and programmable macros",
             product_price_usd=Decimal("89.99"),
             product_category="electronics",
-            product_in_stock=True,
+            product_stock_quantity=8,
         ),
         Product(
             product_id=3,
@@ -52,7 +52,7 @@ def get_seed_products() -> list[Product]:
             product_description="Multi-port USB-C hub with HDMI, SD card reader, and 100W power delivery",
             product_price_usd=Decimal("45.99"),
             product_category="electronics",
-            product_in_stock=True,
+            product_stock_quantity=3,
         ),
         Product(
             product_id=4,
@@ -60,7 +60,7 @@ def get_seed_products() -> list[Product]:
             product_description="Active noise cancelling wireless earbuds with 30-hour battery life and charging case",
             product_price_usd=Decimal("149.99"),
             product_category="electronics",
-            product_in_stock=False,
+            product_stock_quantity=0,
         ),
         Product(
             product_id=5,
@@ -68,7 +68,7 @@ def get_seed_products() -> list[Product]:
             product_description="Ultra HD 4K webcam with autofocus, ring light, and dual microphones",
             product_price_usd=Decimal("119.99"),
             product_category="electronics",
-            product_in_stock=True,
+            product_stock_quantity=12,
         ),
         Product(
             product_id=6,
@@ -76,7 +76,7 @@ def get_seed_products() -> list[Product]:
             product_description="Ultra-fast portable solid state drive with USB 3.2 Gen 2 speeds up to 1050MB/s",
             product_price_usd=Decimal("129.99"),
             product_category="electronics",
-            product_in_stock=True,
+            product_stock_quantity=5,
         ),
         Product(
             product_id=7,
@@ -84,7 +84,7 @@ def get_seed_products() -> list[Product]:
             product_description="WiFi-enabled color-changing LED bulb compatible with Alexa and Google Home",
             product_price_usd=Decimal("19.99"),
             product_category="electronics",
-            product_in_stock=True,
+            product_stock_quantity=45,
         ),
         Product(
             product_id=8,
@@ -92,7 +92,7 @@ def get_seed_products() -> list[Product]:
             product_description="15W fast wireless charging stand with adjustable viewing angle for smartphones",
             product_price_usd=Decimal("34.99"),
             product_category="electronics",
-            product_in_stock=True,
+            product_stock_quantity=18,
         ),
         # Clothing (7 products)
         Product(
@@ -101,7 +101,7 @@ def get_seed_products() -> list[Product]:
             product_description="100% organic cotton crew neck t-shirt available in multiple colors",
             product_price_usd=Decimal("24.99"),
             product_category="clothing",
-            product_in_stock=True,
+            product_stock_quantity=34,
         ),
         Product(
             product_id=10,
@@ -109,7 +109,7 @@ def get_seed_products() -> list[Product]:
             product_description="Stretch denim jeans with modern slim fit and classic 5-pocket styling",
             product_price_usd=Decimal("59.99"),
             product_category="clothing",
-            product_in_stock=True,
+            product_stock_quantity=1,
         ),
         Product(
             product_id=11,
@@ -117,7 +117,7 @@ def get_seed_products() -> list[Product]:
             product_description="Comfortable fleece-lined hoodie with full zip and kangaroo pockets",
             product_price_usd=Decimal("44.99"),
             product_category="clothing",
-            product_in_stock=True,
+            product_stock_quantity=16,
         ),
         Product(
             product_id=12,
@@ -125,7 +125,7 @@ def get_seed_products() -> list[Product]:
             product_description="Lightweight water-resistant windbreaker with reflective details for running",
             product_price_usd=Decimal("69.99"),
             product_category="clothing",
-            product_in_stock=False,
+            product_stock_quantity=0,
         ),
         Product(
             product_id=13,
@@ -133,7 +133,7 @@ def get_seed_products() -> list[Product]:
             product_description="Soft merino wool winter beanie hat with fold-over cuff design",
             product_price_usd=Decimal("29.99"),
             product_category="clothing",
-            product_in_stock=True,
+            product_stock_quantity=28,
         ),
         Product(
             product_id=14,
@@ -141,7 +141,7 @@ def get_seed_products() -> list[Product]:
             product_description="Classic low-top canvas sneakers with rubber sole and cushioned insole",
             product_price_usd=Decimal("54.99"),
             product_category="clothing",
-            product_in_stock=True,
+            product_stock_quantity=2,
         ),
         Product(
             product_id=15,
@@ -149,7 +149,7 @@ def get_seed_products() -> list[Product]:
             product_description="Genuine leather crossbody bag with adjustable strap and multiple compartments",
             product_price_usd=Decimal("89.99"),
             product_category="clothing",
-            product_in_stock=True,
+            product_stock_quantity=7,
         ),
         # Home (7 products)
         Product(
@@ -158,7 +158,7 @@ def get_seed_products() -> list[Product]:
             product_description="34oz double-wall insulated French press coffee maker with heat-resistant handle",
             product_price_usd=Decimal("39.99"),
             product_category="home",
-            product_in_stock=True,
+            product_stock_quantity=14,
         ),
         Product(
             product_id=17,
@@ -166,7 +166,7 @@ def get_seed_products() -> list[Product]:
             product_description="10-inch ceramic-coated frying pan with ergonomic handle and even heat distribution",
             product_price_usd=Decimal("49.99"),
             product_category="home",
-            product_in_stock=True,
+            product_stock_quantity=9,
         ),
         Product(
             product_id=18,
@@ -174,7 +174,7 @@ def get_seed_products() -> list[Product]:
             product_description="Set of 2 bamboo-covered memory foam pillows with adjustable fill for custom comfort",
             product_price_usd=Decimal("79.99"),
             product_category="home",
-            product_in_stock=True,
+            product_stock_quantity=11,
         ),
         Product(
             product_id=19,
@@ -182,7 +182,7 @@ def get_seed_products() -> list[Product]:
             product_description="App-controlled robot vacuum with auto-recharge and scheduled cleaning features",
             product_price_usd=Decimal("299.99"),
             product_category="home",
-            product_in_stock=False,
+            product_stock_quantity=0,
         ),
         Product(
             product_id=20,
@@ -190,7 +190,7 @@ def get_seed_products() -> list[Product]:
             product_description="Set of 3 bamboo cutting boards with juice grooves and non-slip feet",
             product_price_usd=Decimal("34.99"),
             product_category="home",
-            product_in_stock=True,
+            product_stock_quantity=25,
         ),
         Product(
             product_id=21,
@@ -198,7 +198,7 @@ def get_seed_products() -> list[Product]:
             product_description="Ultrasonic essential oil diffuser with 7 LED light colors and auto shut-off",
             product_price_usd=Decimal("29.99"),
             product_category="home",
-            product_in_stock=True,
+            product_stock_quantity=4,
         ),
         Product(
             product_id=22,
@@ -206,7 +206,7 @@ def get_seed_products() -> list[Product]:
             product_description="Premium weighted blanket with glass beads and soft breathable cotton cover",
             product_price_usd=Decimal("89.99"),
             product_category="home",
-            product_in_stock=True,
+            product_stock_quantity=6,
         ),
         # Sports (5 products)
         Product(
@@ -215,7 +215,7 @@ def get_seed_products() -> list[Product]:
             product_description="6mm thick non-slip yoga mat with alignment marks and free carrying strap",
             product_price_usd=Decimal("39.99"),
             product_category="sports",
-            product_in_stock=True,
+            product_stock_quantity=19,
         ),
         Product(
             product_id=24,
@@ -223,7 +223,7 @@ def get_seed_products() -> list[Product]:
             product_description="Pair of adjustable dumbbells from 5-52.5 lbs with quick-change dial system",
             product_price_usd=Decimal("499.99"),
             product_category="sports",
-            product_in_stock=True,
+            product_stock_quantity=3,
         ),
         Product(
             product_id=25,
@@ -231,7 +231,7 @@ def get_seed_products() -> list[Product]:
             product_description="Set of 5 resistance bands with handles, door anchor, and carrying bag",
             product_price_usd=Decimal("24.99"),
             product_category="sports",
-            product_in_stock=True,
+            product_stock_quantity=42,
         ),
         Product(
             product_id=26,
@@ -239,7 +239,7 @@ def get_seed_products() -> list[Product]:
             product_description="High-density foam roller for deep tissue massage and muscle recovery",
             product_price_usd=Decimal("29.99"),
             product_category="sports",
-            product_in_stock=True,
+            product_stock_quantity=31,
         ),
         Product(
             product_id=27,
@@ -247,7 +247,7 @@ def get_seed_products() -> list[Product]:
             product_description="Insulated stainless steel water bottle keeps drinks cold for 24 hours",
             product_price_usd=Decimal("34.99"),
             product_category="sports",
-            product_in_stock=False,
+            product_stock_quantity=0,
         ),
         # Books (3 products)
         Product(
@@ -256,7 +256,7 @@ def get_seed_products() -> list[Product]:
             product_description="Classic software development book with timeless programming wisdom and best practices",
             product_price_usd=Decimal("44.99"),
             product_category="books",
-            product_in_stock=True,
+            product_stock_quantity=8,
         ),
         Product(
             product_id=29,
@@ -264,7 +264,7 @@ def get_seed_products() -> list[Product]:
             product_description="Science-backed strategies for building good habits and breaking bad ones",
             product_price_usd=Decimal("16.99"),
             product_category="books",
-            product_in_stock=True,
+            product_stock_quantity=50,
         ),
         Product(
             product_id=30,
@@ -272,6 +272,6 @@ def get_seed_products() -> list[Product]:
             product_description="Foundational book on user-centered design and human-computer interaction",
             product_price_usd=Decimal("24.99"),
             product_category="books",
-            product_in_stock=True,
+            product_stock_quantity=12,
         ),
     ]

@@ -34,11 +34,12 @@ async def get_products(
         description="Sort order: price_asc, price_desc, name_asc, name_desc, newest",
         pattern="^(price_asc|price_desc|name_asc|name_desc|newest)$",
     ),
+    in_stock_only: bool = Query(default=False, description="Show only products with stock available"),
     page_number: int = Query(default=1, ge=1, description="Page number (1-based)"),
     page_size: int = Query(default=10, ge=1, le=100, description="Items per page (10, 25, or 50)"),
 ) -> ProductListResponse | JSONResponse:
     """
-    Get products from the catalog with optional filtering and pagination.
+    Get products from the catalog with optional filtering, sorting, and pagination.
 
     This endpoint returns products matching the provided filter criteria.
     All filter parameters are optional. When no filters are provided,
@@ -50,6 +51,7 @@ async def get_products(
         category: Filter by product category (electronics, clothing, home, sports, books)
         search_keyword: Search keyword for product name and description (case-insensitive)
         sort_by: Sort order (price_asc, price_desc, name_asc, name_desc, newest)
+        in_stock_only: Show only products with stock available (stock_quantity > 0)
         page_number: Page number (1-based, default: 1)
         page_size: Items per page (10, 25, or 50, default: 10)
 
@@ -69,7 +71,7 @@ async def get_products(
                     "product_description": "Ergonomic wireless mouse...",
                     "product_price_usd": "29.99",
                     "product_category": "electronics",
-                    "product_in_stock": true
+                    "product_stock_quantity": 15
                 },
                 ...
             ],
@@ -93,6 +95,7 @@ async def get_products(
         category=category,
         search_keyword=search_keyword,
         sort_by=sort_by,
+        in_stock_only=in_stock_only,
         page_number=page_number,
         page_size=page_size,
         operation="get_products",
@@ -142,6 +145,7 @@ async def get_products(
         category=category,
         search_keyword=search_keyword,
         sort_by=sort_by,
+        in_stock_only=in_stock_only,
         page_number=page_number,
         page_size=page_size,
     )
@@ -163,6 +167,7 @@ async def get_products(
         products_count=len(products),
         total_count=total_count,
         sort_by=sort_by,
+        in_stock_only=in_stock_only,
         page_number=page_number,
         page_size=page_size,
         total_pages=total_pages,

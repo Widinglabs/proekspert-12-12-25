@@ -160,3 +160,61 @@ def test_no_filters_returns_all_products(test_client: TestClient) -> None:
     assert response.status_code == 200
     assert data["total_count"] == 30
     assert len(data["products"]) == 30
+
+
+def test_filter_products_in_stock_only_returns_available_products(test_client: TestClient) -> None:
+    """Test that in_stock_only=true filters out products with zero stock."""
+    # Get all products to establish baseline
+    response_all = test_client.get("/api/products")
+    assert response_all.status_code == 200
+    all_products = response_all.json()["products"]
+
+    # Get only in-stock products
+    response_in_stock = test_client.get("/api/products?in_stock_only=true")
+    assert response_in_stock.status_code == 200
+
+    data = response_in_stock.json()
+    in_stock_products = data["products"]
+
+    # Verify all returned products have stock_quantity > 0
+    for product in in_stock_products:
+        assert product["product_stock_quantity"] > 0, f"Product {product['product_id']} has zero stock but was returned"
+
+    # Verify count is less than total (since some products are out of stock)
+    assert len(in_stock_products) < len(all_products), "In-stock filter should return fewer products"
+    assert data["total_count"] == len(in_stock_products)
+
+
+def test_filter_products_in_stock_only_false_returns_all_products(test_client: TestClient) -> None:
+    """Test that in_stock_only=false returns all products including out of stock."""
+    response = test_client.get("/api/products?in_stock_only=false")
+    assert response.status_code == 200
+
+    data = response.json()
+    products = data["products"]
+
+    # Should return all 30 products
+    assert len(products) == 30
+    assert data["total_count"] == 30
+
+    # Should include products with zero stock
+    out_of_stock_count = sum(1 for p in products if p["product_stock_quantity"] == 0)
+    assert out_of_stock_count > 0, "Should include out-of-stock products"
+
+
+def test_filter_products_combines_in_stock_only_with_other_filters(test_client: TestClient) -> None:
+    """Test that in_stock_only works with other filters like category."""
+    response = test_client.get("/api/products?category=electronics&in_stock_only=true")
+    assert response.status_code == 200
+
+    data = response.json()
+    products = data["products"]
+
+    # All products should be electronics AND have stock
+    for product in products:
+        assert product["product_category"] == "electronics"
+        assert product["product_stock_quantity"] > 0
+
+    # Should be fewer than 8 (total electronics) since ID 4 is out of stock
+    assert len(products) < 8, "Should exclude out-of-stock electronics"
+    assert data["total_count"] == len(products)
