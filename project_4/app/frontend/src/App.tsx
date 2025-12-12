@@ -21,9 +21,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { ProductFilters } from "@/components/ProductFilters";
 import { ProductGrid } from "@/components/ProductGrid";
+import { RecentlyViewedProducts } from "@/components/RecentlyViewedProducts";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { fetchProducts } from "@/lib/api-client";
 import { logger } from "@/lib/logger";
+import { getRecentlyViewedProductIds } from "@/lib/recently-viewed-storage";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { ApiError } from "@/types/error";
 import type { Product, ProductFilterParams } from "@/types/product";
@@ -50,6 +52,9 @@ export function App() {
 
   // State for current filter parameters
   const [filters, setFilters] = useState<ProductFilterParams>({});
+
+  // State for recently viewed product IDs
+  const [recentlyViewedProductIds, setRecentlyViewedProductIds] = useState<number[]>([]);
 
   /**
    * Fetch products from backend API with optional filters.
@@ -128,6 +133,30 @@ export function App() {
     loadProducts();
   }, [loadProducts]);
 
+  // Load recently viewed IDs on component mount
+  useEffect(() => {
+    const viewedIds = getRecentlyViewedProductIds();
+    setRecentlyViewedProductIds(viewedIds);
+    logger.info("recently_viewed_loaded", {
+      recently_viewed_count: viewedIds.length,
+      component: "App",
+    });
+  }, []);
+
+  // Refresh recently viewed list when window regains focus
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const viewedIds = getRecentlyViewedProductIds();
+      setRecentlyViewedProductIds(viewedIds);
+    };
+
+    window.addEventListener("focus", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("focus", handleStorageChange);
+    };
+  }, []);
+
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-background">
@@ -154,6 +183,11 @@ export function App() {
         <main className="container mx-auto px-4 py-8">
           {/* Filter controls */}
           <ProductFilters onFilterChange={handleFilterChange} loading={loading} />
+
+          {/* Recently Viewed Section - only show if products loaded and has viewed items */}
+          {!loading && !error && recentlyViewedProductIds.length > 0 && (
+            <RecentlyViewedProducts recently_viewed_product_ids={recentlyViewedProductIds} all_products={products} />
+          )}
 
           {/* Error state - show error message with retry button */}
           {error ? (

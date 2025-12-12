@@ -17,6 +17,8 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { logger } from "@/lib/logger";
+import { trackProductView } from "@/lib/recently-viewed-storage";
 import type { Product } from "@/types/product";
 
 interface ProductCardProps {
@@ -37,6 +39,18 @@ interface ProductCardProps {
  * @param product - Product data from API
  */
 export function ProductCard({ product }: ProductCardProps) {
+  /**
+   * Handle product card click to track view in localStorage.
+   */
+  const handleProductClick = () => {
+    logger.info("product_card_clicked", {
+      product_id: product.product_id,
+      product_name: product.product_name,
+      component: "ProductCard",
+    });
+    trackProductView(product.product_id);
+  };
+
   // Format price as USD currency
   // Backend sends Decimal as string, parse to number for formatting
   const formattedPrice = new Intl.NumberFormat("en-US", {
@@ -59,7 +73,10 @@ export function ProductCard({ product }: ProductCardProps) {
   const categoryColor = categoryColors[product.product_category] || "bg-gray-100 text-gray-800";
 
   return (
-    <Card className="h-full flex flex-col transition-shadow hover:shadow-lg">
+    <Card
+      className="h-full flex flex-col transition-shadow hover:shadow-lg cursor-pointer"
+      onClick={handleProductClick}
+    >
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-lg line-clamp-2 flex-1">{product.product_name}</CardTitle>
