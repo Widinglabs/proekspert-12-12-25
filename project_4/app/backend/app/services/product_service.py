@@ -52,9 +52,11 @@ def filter_products(
     category: str | None = None,
     search_keyword: str | None = None,
     sort_by: str | None = None,
-) -> list[Product]:
+    page_number: int = 1,
+    page_size: int = 10,
+) -> tuple[list[Product], int]:
     """
-    Filter and sort products based on the provided criteria.
+    Filter and sort products based on the provided criteria with pagination support.
 
     All filter parameters are optional. When multiple parameters are provided,
     they are combined with AND logic (all conditions must match). Sorting is
@@ -66,15 +68,19 @@ def filter_products(
         category: Filter by product category (exact match).
         search_keyword: Search in product name and description (case-insensitive).
         sort_by: Sort order for results. Options: price_asc, price_desc, name_asc, name_desc, newest.
+        page_number: Page number (1-based, default: 1).
+        page_size: Number of items per page (default: 10).
 
     Returns:
-        List of Product objects matching all provided filter criteria, sorted as requested.
+        Tuple of (paginated_products, total_count) where:
+        - paginated_products: List of Product objects for the requested page
+        - total_count: Total number of products matching filter criteria (across all pages)
 
     Example:
-        >>> products = filter_products(category="electronics", sort_by="price_asc")
+        >>> products, total = filter_products(category="electronics", sort_by="price_asc", page_number=1, page_size=10)
         >>> all(p.product_category == "electronics" for p in products)
         True
-        >>> products[0].product_price_usd <= products[-1].product_price_usd
+        >>> len(products) <= 10
         True
     """
     logger.info(
@@ -84,6 +90,8 @@ def filter_products(
         category=category,
         search_keyword=search_keyword,
         sort_by=sort_by,
+        page_number=page_number,
+        page_size=page_size,
         operation="filter_products",
     )
 
@@ -124,11 +132,21 @@ def filter_products(
         results.sort(key=lambda p: p.product_id, reverse=True)
     # If sort_by is None or unrecognized, keep default order
 
+    # Calculate total count before pagination
+    total_count = len(results)
+
+    # Apply pagination
+    offset = (page_number - 1) * page_size
+    paginated_results = results[offset : offset + page_size]
+
     logger.info(
         "filtering_products_completed",
-        total_results=len(results),
+        total_results=total_count,
+        returned_count=len(paginated_results),
         sort_by=sort_by,
+        page_number=page_number,
+        page_size=page_size,
         operation="filter_products",
     )
 
-    return results
+    return paginated_results, total_count

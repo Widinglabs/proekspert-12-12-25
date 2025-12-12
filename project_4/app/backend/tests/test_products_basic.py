@@ -46,9 +46,9 @@ def test_get_all_products_returns_30_products(test_client: TestClient) -> None:
     Test that GET /api/products returns all 30 seed products.
 
     Since we have 30 products in our seed data, we should get all of them
-    when no filters are applied.
+    when no filters are applied (using page_size=50 to get all products in one page).
     """
-    response = test_client.get("/api/products")
+    response = test_client.get("/api/products?page_size=50")
     data = response.json()
 
     assert data["total_count"] == 30

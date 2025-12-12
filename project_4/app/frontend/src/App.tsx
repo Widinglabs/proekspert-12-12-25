@@ -19,6 +19,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { PaginationControls } from "@/components/PaginationControls";
 import { ProductFilters } from "@/components/ProductFilters";
 import { ProductGrid } from "@/components/ProductGrid";
 import { RecentlyViewedProducts } from "@/components/RecentlyViewedProducts";
@@ -29,7 +30,7 @@ import { logger } from "@/lib/logger";
 import { getRecentlyViewedProductIds } from "@/lib/recently-viewed-storage";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { ApiError } from "@/types/error";
-import type { Product, ProductFilterParams } from "@/types/product";
+import type { PaginationMetadata, Product, ProductFilterParams } from "@/types/product";
 import "./index.css";
 
 /**
@@ -63,76 +64,100 @@ export function App() {
   // State for favorites-only filter toggle
   const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
 
+  // State for pagination
+  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [paginationMetadata, setPaginationMetadata] = useState<PaginationMetadata | null>(null);
+
   /**
-   * Fetch products from backend API with optional filters.
+   * Fetch products from backend API with optional filters and pagination.
    *
    * Handles both ApiError (from backend) and network errors.
    * Updates state based on result.
    *
    * @param filterParams - Optional filter parameters to apply
+   * @param page - Page number to fetch (defaults to current pageNumber state)
+   * @param size - Page size (defaults to current pageSize state)
    */
-  const loadProducts = useCallback(async (filterParams?: ProductFilterParams) => {
-    logger.info("app_loading_products", {
-      operation: "load_products",
-      filters: filterParams ?? null,
-      component: "App",
-    });
+  const loadProducts = useCallback(
+    async (filterParams?: ProductFilterParams, page?: number, size?: number) => {
+      const currentPage = page ?? pageNumber;
+      const currentSize = size ?? pageSize;
 
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Call backend API with filters
-      const response = await fetchProducts(filterParams);
-
-      // Update state with fetched products
-      setProducts(response.products);
-
-      logger.info("app_products_loaded", {
-        products_count: response.total_count,
+      logger.info("app_loading_products", {
         operation: "load_products",
         filters: filterParams ?? null,
+        page_number: currentPage,
+        page_size: currentSize,
         component: "App",
       });
-    } catch (err) {
-      // Extract error message based on error type
-      const errorMessage =
-        err instanceof ApiError
-          ? err.errorResponse.error_message
-          : err instanceof Error
-            ? err.message
-            : "An unknown error occurred while loading products";
 
-      setError(errorMessage);
+      try {
+        setLoading(true);
+        setError(null);
 
-      logger.error("app_load_products_failed", {
-        error_message: errorMessage,
-        error_type: err instanceof ApiError ? "api_error" : "network_error",
-        error_code: err instanceof ApiError ? err.errorResponse.error_code : undefined,
-        operation: "load_products",
-        filters: filterParams ?? null,
-        component: "App",
-        fix_suggestion:
+        // Call backend API with filters and pagination
+        const response = await fetchProducts({
+          ...filterParams,
+          page_number: currentPage,
+          page_size: currentSize,
+        });
+
+        // Update state with fetched products and pagination metadata
+        setProducts(response.products);
+        setPaginationMetadata(response.pagination);
+
+        logger.info("app_products_loaded", {
+          products_count: response.products.length,
+          total_count: response.total_count,
+          page_number: response.pagination.page_number,
+          total_pages: response.pagination.total_pages,
+          operation: "load_products",
+          filters: filterParams ?? null,
+          component: "App",
+        });
+      } catch (err) {
+        // Extract error message based on error type
+        const errorMessage =
           err instanceof ApiError
-            ? "Check backend logs for error details"
-            : "Verify backend server is running at http://localhost:8000",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+            ? err.errorResponse.error_message
+            : err instanceof Error
+              ? err.message
+              : "An unknown error occurred while loading products";
+
+        setError(errorMessage);
+
+        logger.error("app_load_products_failed", {
+          error_message: errorMessage,
+          error_type: err instanceof ApiError ? "api_error" : "network_error",
+          error_code: err instanceof ApiError ? err.errorResponse.error_code : undefined,
+          operation: "load_products",
+          filters: filterParams ?? null,
+          component: "App",
+          fix_suggestion:
+            err instanceof ApiError
+              ? "Check backend logs for error details"
+              : "Verify backend server is running at http://localhost:8000",
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pageNumber, pageSize]
+  );
 
   /**
    * Handle filter changes from ProductFilters component.
    *
-   * Updates filter state and triggers a new product fetch.
+   * Updates filter state, resets to page 1, and triggers a new product fetch.
    */
   const handleFilterChange = useCallback(
     (newFilters: ProductFilterParams) => {
       setFilters(newFilters);
-      loadProducts(newFilters);
+      setPageNumber(1); // Reset to first page when filters change
+      loadProducts(newFilters, 1, pageSize);
     },
-    [loadProducts]
+    [loadProducts, pageSize]
   );
 
   /**
@@ -165,10 +190,36 @@ export function App() {
     [favoritedProductIds.size]
   );
 
-  // Load products on component mount
+  /**
+   * Handle page number change from PaginationControls.
+   */
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      setPageNumber(newPage);
+      loadProducts(filters, newPage, pageSize);
+    },
+    [filters, pageSize, loadProducts]
+  );
+
+  /**
+   * Handle page size change from PaginationControls.
+   *
+   * Resets to page 1 when page size changes to avoid invalid page numbers.
+   */
+  const handlePageSizeChange = useCallback(
+    (newPageSize: number) => {
+      setPageSize(newPageSize);
+      setPageNumber(1); // Reset to first page when page size changes
+      loadProducts(filters, 1, newPageSize);
+    },
+    [filters, loadProducts]
+  );
+
+  // Load products on component mount only (intentionally empty dependency array)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Initial load only
   useEffect(() => {
     loadProducts();
-  }, [loadProducts]);
+  }, []);
 
   // Load recently viewed IDs on component mount
   useEffect(() => {
@@ -221,7 +272,9 @@ export function App() {
                       ? "Error loading products"
                       : showFavoritesOnly
                         ? `Showing ${displayedProducts.length} favorite products`
-                        : `Browse our collection of ${products.length} products (${favoritedProductIds.size} favorites)`}
+                        : paginationMetadata
+                          ? `Browse our collection of ${paginationMetadata.total_count} products (${favoritedProductIds.size} favorites)`
+                          : `Browse our collection of ${products.length} products (${favoritedProductIds.size} favorites)`}
                 </p>
               </div>
               <ThemeToggle />
@@ -238,6 +291,8 @@ export function App() {
             showFavoritesOnly={showFavoritesOnly}
             onShowFavoritesToggle={handleShowFavoritesToggle}
             totalFavorites={favoritedProductIds.size}
+            onPageSizeChange={handlePageSizeChange}
+            currentPageSize={pageSize}
           />
 
           {/* Recently Viewed Section - only show if products loaded and has viewed items */}
@@ -287,14 +342,25 @@ export function App() {
               </div>
             </div>
           ) : (
-            // Success/Loading state - show product grid
-            <ProductGrid
-              products={displayedProducts}
-              loading={loading}
-              favoritedProductIds={favoritedProductIds}
-              onToggleFavorite={handleToggleFavorite}
-              showingFavoritesOnly={showFavoritesOnly}
-            />
+            // Success/Loading state - show product grid with pagination
+            <>
+              <ProductGrid
+                products={displayedProducts}
+                loading={loading}
+                favoritedProductIds={favoritedProductIds}
+                onToggleFavorite={handleToggleFavorite}
+                showingFavoritesOnly={showFavoritesOnly}
+              />
+              {/* Pagination controls - only show when we have pagination metadata and no error */}
+              {paginationMetadata && (
+                <PaginationControls
+                  pagination={paginationMetadata}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
+                  disabled={loading}
+                />
+              )}
+            </>
           )}
         </main>
 

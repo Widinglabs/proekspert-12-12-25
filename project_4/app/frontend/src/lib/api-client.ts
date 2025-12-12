@@ -33,6 +33,8 @@ const API_BASE_URL = "http://localhost:8000";
  * - maximum_price_usd -> max_price_usd
  * - category -> category
  * - search_keyword -> search_keyword
+ * - page_number -> page_number
+ * - page_size -> page_size
  *
  * @param filters - Optional filter parameters
  * @returns Query string (without leading ?) or empty string if no filters
@@ -58,6 +60,12 @@ function buildFilterQueryString(filters?: ProductFilterParams): string {
   }
   if (filters.sort_by) {
     params.append("sort_by", filters.sort_by);
+  }
+  if (filters.page_number !== undefined) {
+    params.append("page_number", filters.page_number.toString());
+  }
+  if (filters.page_size !== undefined) {
+    params.append("page_size", filters.page_size.toString());
   }
 
   return params.toString();
@@ -147,7 +155,11 @@ export async function fetchProducts(filters?: ProductFilterParams): Promise<Prod
 
     logger.info("products_fetched_successfully", {
       endpoint,
-      products_count: data.total_count,
+      products_count: data.products.length,
+      total_count: data.total_count,
+      page_number: data.pagination.page_number,
+      page_size: data.pagination.page_size,
+      total_pages: data.pagination.total_pages,
       operation: "fetchProducts",
     });
 

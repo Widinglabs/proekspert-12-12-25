@@ -149,11 +149,12 @@ def test_no_filters_returns_all_products(test_client: TestClient) -> None:
     Test that when no filters are provided, all products are returned.
 
     This ensures that filtering is optional and the default behavior
-    (no parameters) still works correctly.
+    (no parameters) still works correctly. Uses page_size=50 to get all
+    products in one page.
 
     Expected: Should return all 30 products.
     """
-    response = test_client.get("/api/products")
+    response = test_client.get("/api/products?page_size=50")
     data = response.json()
 
     assert response.status_code == 200
