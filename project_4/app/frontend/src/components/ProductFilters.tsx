@@ -6,6 +6,7 @@
  * - Price range (min/max inputs)
  * - Keyword search (text input)
  * - Favorites filter (checkbox)
+ * - Sort order (dropdown)
  *
  * Uses React Hook Form + Zod for form validation and state management.
  * Logs all filter operations with structured JSON for debugging.
@@ -30,6 +31,7 @@ import type { ProductCategory, ProductFilterParams } from "@/types/product";
  * - Prices are non-negative numbers (or empty)
  * - Category is one of the valid options (or empty for "All")
  * - Search keyword is max 100 characters
+ * - Sort order is one of the valid options
  * - Min price <= max price when both are provided
  */
 const filterFormSchema = z
@@ -51,6 +53,10 @@ const filterFormSchema = z
     search_keyword: z
       .string()
       .max(100, "Search keyword must be 100 characters or less")
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
+    sort_by: z
+      .enum(["price_asc", "price_desc", "name_asc", "name_desc", "newest"])
       .optional()
       .or(z.literal("").transform(() => undefined)),
   })
@@ -120,6 +126,7 @@ export function ProductFilters({
       maximum_price_usd: undefined,
       category: undefined,
       search_keyword: "",
+      sort_by: undefined,
     },
   });
 
@@ -141,12 +148,16 @@ export function ProductFilters({
     if (values.search_keyword) {
       filters.search_keyword = values.search_keyword;
     }
+    if (values.sort_by) {
+      filters.sort_by = values.sort_by as ProductFilterParams["sort_by"];
+    }
 
     logger.info("filters_applied", {
       category: filters.category ?? null,
       minimum_price_usd: filters.minimum_price_usd ?? null,
       maximum_price_usd: filters.maximum_price_usd ?? null,
       search_keyword: filters.search_keyword ?? null,
+      sort_by: filters.sort_by ?? null,
       operation: "apply_filters",
     });
 
@@ -162,6 +173,7 @@ export function ProductFilters({
       maximum_price_usd: undefined,
       category: undefined,
       search_keyword: "",
+      sort_by: undefined,
     });
 
     logger.info("filters_cleared", {
@@ -197,7 +209,7 @@ export function ProductFilters({
           </label>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
           {/* Category Select */}
           <FormField
             control={form.control}
@@ -285,6 +297,37 @@ export function ProductFilters({
                 <FormControl>
                   <Input type="text" placeholder="Search products..." maxLength={100} disabled={loading} {...field} />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Sort By Select */}
+          <FormField
+            control={form.control}
+            name="sort_by"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Sort By</FormLabel>
+                <Select
+                  onValueChange={(value) => field.onChange(value === "" ? undefined : value)}
+                  value={field.value ?? ""}
+                  disabled={loading}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Default (Newest)" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="">Default (Newest)</SelectItem>
+                    <SelectItem value="price_asc">Price: Low to High</SelectItem>
+                    <SelectItem value="price_desc">Price: High to Low</SelectItem>
+                    <SelectItem value="name_asc">Name: A-Z</SelectItem>
+                    <SelectItem value="name_desc">Name: Z-A</SelectItem>
+                    <SelectItem value="newest">Newest First</SelectItem>
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

@@ -51,27 +51,30 @@ def filter_products(
     max_price_usd: Decimal | None = None,
     category: str | None = None,
     search_keyword: str | None = None,
+    sort_by: str | None = None,
 ) -> list[Product]:
     """
-    Filter products based on the provided criteria.
+    Filter and sort products based on the provided criteria.
 
     All filter parameters are optional. When multiple parameters are provided,
-    they are combined with AND logic (all conditions must match).
+    they are combined with AND logic (all conditions must match). Sorting is
+    applied after filtering.
 
     Args:
         min_price_usd: Minimum price filter (inclusive). Products with price >= this value.
         max_price_usd: Maximum price filter (inclusive). Products with price <= this value.
         category: Filter by product category (exact match).
         search_keyword: Search in product name and description (case-insensitive).
+        sort_by: Sort order for results. Options: price_asc, price_desc, name_asc, name_desc, newest.
 
     Returns:
-        List of Product objects matching all provided filter criteria.
+        List of Product objects matching all provided filter criteria, sorted as requested.
 
     Example:
-        >>> products = filter_products(category="electronics", min_price_usd=Decimal("20.00"))
+        >>> products = filter_products(category="electronics", sort_by="price_asc")
         >>> all(p.product_category == "electronics" for p in products)
         True
-        >>> all(p.product_price_usd >= Decimal("20.00") for p in products)
+        >>> products[0].product_price_usd <= products[-1].product_price_usd
         True
     """
     logger.info(
@@ -80,6 +83,7 @@ def filter_products(
         max_price_usd=str(max_price_usd) if max_price_usd is not None else None,
         category=category,
         search_keyword=search_keyword,
+        sort_by=sort_by,
         operation="filter_products",
     )
 
@@ -107,9 +111,23 @@ def filter_products(
             if keyword_lower in product.product_name.lower() or keyword_lower in product.product_description.lower()
         ]
 
+    # Apply sorting if requested
+    if sort_by == "price_asc":
+        results.sort(key=lambda p: p.product_price_usd)
+    elif sort_by == "price_desc":
+        results.sort(key=lambda p: p.product_price_usd, reverse=True)
+    elif sort_by == "name_asc":
+        results.sort(key=lambda p: p.product_name.lower())
+    elif sort_by == "name_desc":
+        results.sort(key=lambda p: p.product_name.lower(), reverse=True)
+    elif sort_by == "newest":
+        results.sort(key=lambda p: p.product_id, reverse=True)
+    # If sort_by is None or unrecognized, keep default order
+
     logger.info(
         "filtering_products_completed",
         total_results=len(results),
+        sort_by=sort_by,
         operation="filter_products",
     )
 

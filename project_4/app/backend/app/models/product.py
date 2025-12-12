@@ -8,6 +8,9 @@ from pydantic import BaseModel, Field
 # Define valid product categories as a type alias for reusability
 ProductCategory = Literal["electronics", "clothing", "home", "sports", "books"]
 
+# Define valid sort options for product listing
+SortOrder = Literal["price_asc", "price_desc", "name_asc", "name_desc", "newest"]
+
 
 class Product(BaseModel):
     """
@@ -140,4 +143,10 @@ class ProductFilterParameters(BaseModel):
         max_length=100,
         description="Search keyword for product name and description (case-insensitive)",
         examples=["wireless", "cotton", "smart"],
+    )
+
+    sort_by: SortOrder | None = Field(
+        default=None,
+        description="Sort order for results (price_asc, price_desc, name_asc, name_desc, newest)",
+        examples=["price_asc", "name_desc", "newest"],
     )
