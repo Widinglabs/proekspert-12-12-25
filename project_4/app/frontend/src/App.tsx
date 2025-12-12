@@ -118,7 +118,7 @@ export function App() {
       setFilters(newFilters);
       loadProducts(newFilters);
     },
-    [loadProducts],
+    [loadProducts]
   );
 
   // Load products on component mount
