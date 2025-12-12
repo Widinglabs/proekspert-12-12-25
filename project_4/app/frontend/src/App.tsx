@@ -2,375 +2,62 @@
  * Main application component for the Product Catalog.
  *
  * Responsibilities:
- * - Fetch products from backend API on mount
- * - Manage loading, error, and success states
- * - Display product grid with proper error handling
- * - Provide user feedback for all states
- *
- * State management:
- * - products: Array of Product objects from API
- * - loading: Boolean indicating API call in progress
- * - error: String with error message (null if no error)
- *
- * Backend integration:
- * - Calls GET /api/products via fetchProducts()
- * - Handles ApiError and network errors
- * - Logs all operations for debugging
+ * - Setup React Router for page navigation
+ * - Define routes for list, detail, and 404 pages
+ * - Provide theme context to all pages
+ * - Render header and footer consistently across routes
  */
 
-import { useCallback, useEffect, useState } from "react";
-import { PaginationControls } from "@/components/PaginationControls";
-import { ProductFilters } from "@/components/ProductFilters";
-import { ProductGrid } from "@/components/ProductGrid";
-import { RecentlyViewedProducts } from "@/components/RecentlyViewedProducts";
+import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { fetchProducts } from "@/lib/api-client";
-import { loadFavorites, saveFavorites, toggleFavorite } from "@/lib/favorites";
-import { logger } from "@/lib/logger";
-import { getRecentlyViewedProductIds } from "@/lib/recently-viewed-storage";
+import { NotFoundPage } from "@/pages/NotFoundPage";
+import { ProductDetailPage } from "@/pages/ProductDetailPage";
+import { ProductListPage } from "@/pages/ProductListPage";
 import { ThemeProvider } from "@/lib/theme-provider";
-import { ApiError } from "@/types/error";
-import type { PaginationMetadata, Product, ProductFilterParams } from "@/types/product";
 import "./index.css";
 
 /**
- * Main App component.
+ * Main App component with routing and theme support.
  *
- * Lifecycle:
- * 1. Mount: Start loading products
- * 2. Loading: Show loading spinner in ProductGrid
- * 3. Success: Display products in grid
- * 4. Error: Show error message with retry button
+ * Routes:
+ * - "/" - Product list page (with filters, favorites, pagination, stock)
+ * - "/products/:productId" - Product detail page
+ * - "*" - 404 Not Found page
  */
 export function App() {
-  // State for products data
-  const [products, setProducts] = useState<Product[]>([]);
-
-  // State for loading indicator
-  const [loading, setLoading] = useState<boolean>(true);
-
-  // State for error message (null = no error)
-  const [error, setError] = useState<string | null>(null);
-
-  // State for current filter parameters
-  const [filters, setFilters] = useState<ProductFilterParams>({});
-
-  // State for recently viewed product IDs
-  const [recentlyViewedProductIds, setRecentlyViewedProductIds] = useState<number[]>([]);
-
-  // State for favorited product IDs (Set for O(1) lookup)
-  const [favoritedProductIds, setFavoritedProductIds] = useState<Set<number>>(new Set());
-
-  // State for favorites-only filter toggle
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
-
-  // State for pagination
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
-  const [paginationMetadata, setPaginationMetadata] = useState<PaginationMetadata | null>(null);
-
-  /**
-   * Fetch products from backend API with optional filters and pagination.
-   *
-   * Handles both ApiError (from backend) and network errors.
-   * Updates state based on result.
-   *
-   * @param filterParams - Optional filter parameters to apply
-   * @param page - Page number to fetch (defaults to current pageNumber state)
-   * @param size - Page size (defaults to current pageSize state)
-   */
-  const loadProducts = useCallback(
-    async (filterParams?: ProductFilterParams, page?: number, size?: number) => {
-      const currentPage = page ?? pageNumber;
-      const currentSize = size ?? pageSize;
-
-      logger.info("app_loading_products", {
-        operation: "load_products",
-        filters: filterParams ?? null,
-        page_number: currentPage,
-        page_size: currentSize,
-        component: "App",
-      });
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Call backend API with filters and pagination
-        const response = await fetchProducts({
-          ...filterParams,
-          page_number: currentPage,
-          page_size: currentSize,
-        });
-
-        // Update state with fetched products and pagination metadata
-        setProducts(response.products);
-        setPaginationMetadata(response.pagination);
-
-        logger.info("app_products_loaded", {
-          products_count: response.products.length,
-          total_count: response.total_count,
-          page_number: response.pagination.page_number,
-          total_pages: response.pagination.total_pages,
-          operation: "load_products",
-          filters: filterParams ?? null,
-          component: "App",
-        });
-      } catch (err) {
-        // Extract error message based on error type
-        const errorMessage =
-          err instanceof ApiError
-            ? err.errorResponse.error_message
-            : err instanceof Error
-              ? err.message
-              : "An unknown error occurred while loading products";
-
-        setError(errorMessage);
-
-        logger.error("app_load_products_failed", {
-          error_message: errorMessage,
-          error_type: err instanceof ApiError ? "api_error" : "network_error",
-          error_code: err instanceof ApiError ? err.errorResponse.error_code : undefined,
-          operation: "load_products",
-          filters: filterParams ?? null,
-          component: "App",
-          fix_suggestion:
-            err instanceof ApiError
-              ? "Check backend logs for error details"
-              : "Verify backend server is running at http://localhost:8000",
-        });
-      } finally {
-        setLoading(false);
-      }
-    },
-    [pageNumber, pageSize]
-  );
-
-  /**
-   * Handle filter changes from ProductFilters component.
-   *
-   * Updates filter state, resets to page 1, and triggers a new product fetch.
-   */
-  const handleFilterChange = useCallback(
-    (newFilters: ProductFilterParams) => {
-      setFilters(newFilters);
-      setPageNumber(1); // Reset to first page when filters change
-      loadProducts(newFilters, 1, pageSize);
-    },
-    [loadProducts, pageSize]
-  );
-
-  /**
-   * Handle toggling a product's favorite status.
-   *
-   * Updates state and persists to localStorage.
-   */
-  const handleToggleFavorite = useCallback((productId: number) => {
-    setFavoritedProductIds((currentFavorites) => {
-      const newFavorites = toggleFavorite(productId, currentFavorites);
-      saveFavorites(newFavorites);
-      return newFavorites;
-    });
-  }, []);
-
-  /**
-   * Handle toggling the "show favorites only" filter.
-   *
-   * Logs the operation for debugging.
-   */
-  const handleShowFavoritesToggle = useCallback(
-    (showOnly: boolean) => {
-      setShowFavoritesOnly(showOnly);
-      logger.info("favorites_filter_toggled", {
-        show_favorites_only: showOnly,
-        total_favorites: favoritedProductIds.size,
-        operation: "toggle_favorites_filter",
-      });
-    },
-    [favoritedProductIds.size]
-  );
-
-  /**
-   * Handle page number change from PaginationControls.
-   */
-  const handlePageChange = useCallback(
-    (newPage: number) => {
-      setPageNumber(newPage);
-      loadProducts(filters, newPage, pageSize);
-    },
-    [filters, pageSize, loadProducts]
-  );
-
-  /**
-   * Handle page size change from PaginationControls.
-   *
-   * Resets to page 1 when page size changes to avoid invalid page numbers.
-   */
-  const handlePageSizeChange = useCallback(
-    (newPageSize: number) => {
-      setPageSize(newPageSize);
-      setPageNumber(1); // Reset to first page when page size changes
-      loadProducts(filters, 1, newPageSize);
-    },
-    [filters, loadProducts]
-  );
-
-  // Load products on component mount only (intentionally empty dependency array)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Initial load only
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
-  // Load recently viewed IDs on component mount
-  useEffect(() => {
-    const viewedIds = getRecentlyViewedProductIds();
-    setRecentlyViewedProductIds(viewedIds);
-    logger.info("recently_viewed_loaded", {
-      recently_viewed_count: viewedIds.length,
-      component: "App",
-    });
-  }, []);
-
-  // Refresh recently viewed list when window regains focus
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const viewedIds = getRecentlyViewedProductIds();
-      setRecentlyViewedProductIds(viewedIds);
-    };
-
-    window.addEventListener("focus", handleStorageChange);
-
-    return () => {
-      window.removeEventListener("focus", handleStorageChange);
-    };
-  }, []);
-
-  // Load favorites from localStorage on component mount
-  useEffect(() => {
-    const favorites = loadFavorites();
-    setFavoritedProductIds(favorites);
-  }, []);
-
-  // Filter products based on favorites toggle
-  const displayedProducts = showFavoritesOnly
-    ? products.filter((product) => favoritedProductIds.has(product.product_id))
-    : products;
-
   return (
     <ThemeProvider>
-      <div className="min-h-screen bg-background">
-        {/* Header section */}
-        <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-          <div className="container mx-auto px-4 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold">Product Catalog</h1>
-                <p className="text-muted-foreground mt-1">
-                  {loading
-                    ? "Loading products..."
-                    : error
-                      ? "Error loading products"
-                      : showFavoritesOnly
-                        ? `Showing ${displayedProducts.length} favorite products`
-                        : paginationMetadata
-                          ? `Browse our collection of ${paginationMetadata.total_count} products (${favoritedProductIds.size} favorites)`
-                          : `Browse our collection of ${products.length} products (${favoritedProductIds.size} favorites)`}
-                </p>
-              </div>
-              <ThemeToggle />
-            </div>
-          </div>
-        </header>
-
-        {/* Main content area */}
-        <main className="container mx-auto px-4 py-8">
-          {/* Filter controls */}
-          <ProductFilters
-            onFilterChange={handleFilterChange}
-            loading={loading}
-            showFavoritesOnly={showFavoritesOnly}
-            onShowFavoritesToggle={handleShowFavoritesToggle}
-            totalFavorites={favoritedProductIds.size}
-            onPageSizeChange={handlePageSizeChange}
-            currentPageSize={pageSize}
-          />
-
-          {/* Recently Viewed Section - only show if products loaded and has viewed items */}
-          {!loading && !error && recentlyViewedProductIds.length > 0 && (
-            <RecentlyViewedProducts recently_viewed_product_ids={recentlyViewedProductIds} all_products={products} />
-          )}
-
-          {/* Error state - show error message with retry button */}
-          {error ? (
-            <div className="max-w-2xl mx-auto">
-              <div className="bg-destructive/10 border border-destructive text-destructive px-6 py-4 rounded-lg">
-                <div className="flex items-start gap-3">
-                  {/* Error icon */}
-                  <svg
-                    className="w-6 h-6 flex-shrink-0 mt-0.5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                    role="img"
-                    aria-label="Error"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <div className="flex-1">
-                    <p className="font-semibold text-lg">Error loading products</p>
-                    <p className="text-sm mt-1">{error}</p>
-                    <button
-                      type="button"
-                      onClick={() => loadProducts(filters)}
-                      className="mt-3 text-sm underline hover:no-underline font-medium"
-                    >
-                      Try again
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Helpful debug info */}
-              <div className="mt-4 text-sm text-muted-foreground text-center">
-                <p>Make sure the backend server is running:</p>
-                <code className="block mt-1 bg-muted px-2 py-1 rounded text-xs">
-                  cd app/backend && uv run python run_api.py
-                </code>
+      <BrowserRouter>
+        <div className="min-h-screen bg-background">
+          {/* Header section */}
+          <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+            <div className="container mx-auto px-4 py-6">
+              <div className="flex items-center justify-between">
+                <Link to="/" className="hover:opacity-80 transition-opacity">
+                  <h1 className="text-3xl font-bold">Product Catalog</h1>
+                </Link>
+                <ThemeToggle />
               </div>
             </div>
-          ) : (
-            // Success/Loading state - show product grid with pagination
-            <>
-              <ProductGrid
-                products={displayedProducts}
-                loading={loading}
-                favoritedProductIds={favoritedProductIds}
-                onToggleFavorite={handleToggleFavorite}
-                showingFavoritesOnly={showFavoritesOnly}
-              />
-              {/* Pagination controls - only show when we have pagination metadata and no error */}
-              {paginationMetadata && (
-                <PaginationControls
-                  pagination={paginationMetadata}
-                  onPageChange={handlePageChange}
-                  onPageSizeChange={handlePageSizeChange}
-                  disabled={loading}
-                />
-              )}
-            </>
-          )}
-        </main>
+          </header>
 
-        {/* Footer */}
-        <footer className="border-t mt-12 py-6">
-          <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-            <p>Product Catalog API - Module 1 Exercise</p>
-          </div>
-        </footer>
-      </div>
+          {/* Main content area - routes render here */}
+          <main>
+            <Routes>
+              <Route path="/" element={<ProductListPage />} />
+              <Route path="/products/:productId" element={<ProductDetailPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </main>
+
+          {/* Footer */}
+          <footer className="border-t mt-12 py-6">
+            <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+              <p>Product Catalog API - Module 1 Exercise</p>
+            </div>
+          </footer>
+        </div>
+      </BrowserRouter>
     </ThemeProvider>
   );
 }
