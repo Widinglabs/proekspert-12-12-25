@@ -158,3 +158,73 @@ def filter_products(
     )
 
     return paginated_results, total_count
+
+
+def get_product_by_id(product_id: int) -> Product | None:
+    """
+    Retrieve a single product by its ID.
+
+    Args:
+        product_id: Unique identifier of the product to retrieve
+
+    Returns:
+        Product object if found, None if product_id doesn't exist
+
+    Example:
+        >>> product = get_product_by_id(1)
+        >>> product.product_name
+        'Wireless Bluetooth Mouse'
+    """
+    logger.info("retrieving_product_by_id", product_id=product_id, operation="get_product_by_id")
+
+    for product in _PRODUCTS_DATABASE:
+        if product.product_id == product_id:
+            logger.info("product_found", product_id=product_id, product_name=product.product_name)
+            return product
+
+    logger.warning("product_not_found", product_id=product_id)
+    return None
+
+
+def get_related_products(product_id: int, limit: int = 4) -> list[Product]:
+    """
+    Get related products based on category.
+
+    Returns products from the same category as the specified product,
+    excluding the product itself. Results are limited to avoid overwhelming UI.
+
+    Args:
+        product_id: ID of the product to find related items for
+        limit: Maximum number of related products to return (default 4)
+
+    Returns:
+        List of Product objects from same category (excluding current product)
+
+    Example:
+        >>> related = get_related_products(1, limit=3)
+        >>> all(p.product_category == "electronics" for p in related)
+        True
+        >>> all(p.product_id != 1 for p in related)
+        True
+    """
+    logger.info("finding_related_products", product_id=product_id, limit=limit)
+
+    current_product = get_product_by_id(product_id)
+    if current_product is None:
+        logger.warning("related_products_base_not_found", product_id=product_id)
+        return []
+
+    results = [
+        product
+        for product in _PRODUCTS_DATABASE
+        if product.product_category == current_product.product_category and product.product_id != product_id
+    ][:limit]
+
+    logger.info(
+        "related_products_found",
+        product_id=product_id,
+        category=current_product.product_category,
+        count=len(results),
+    )
+
+    return results

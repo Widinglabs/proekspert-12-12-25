@@ -14,7 +14,7 @@
  */
 
 import { ApiError, type ErrorResponse } from "@/types/error";
-import type { ProductFilterParams, ProductListResponse } from "@/types/product";
+import type { Product, ProductFilterParams, ProductListResponse } from "@/types/product";
 import { logger } from "./logger";
 
 /**
@@ -241,5 +241,195 @@ export async function checkHealth(): Promise<boolean> {
     });
 
     return false;
+  }
+}
+
+/**
+ * Fetch a single product by its ID.
+ *
+ * Backend endpoint: GET /api/products/{product_id}
+ * Response model: Product
+ *
+ * @param productId - Unique identifier of the product to fetch
+ * @returns Product object with full details
+ * @throws ApiError if product not found (404) or other API error
+ * @throws Error if network failure
+ *
+ * Example usage:
+ * ```typescript
+ * try {
+ *   const product = await fetchProductById(1);
+ *   console.log(product.product_name);
+ * } catch (error) {
+ *   if (error instanceof ApiError && error.statusCode === 404) {
+ *     console.error('Product not found');
+ *   }
+ * }
+ * ```
+ */
+export async function fetchProductById(productId: number): Promise<Product> {
+  const endpoint = `/api/products/${productId}`;
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  logger.info("fetching_product_by_id", {
+    endpoint,
+    product_id: productId,
+    operation: "fetchProductById",
+  });
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      let errorData: ErrorResponse;
+
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = {
+          error_code: "unknown_error",
+          error_message: `HTTP ${response.status}: ${response.statusText}`,
+          timestamp_utc: new Date().toISOString(),
+        };
+      }
+
+      const isNotFound = response.status === 404;
+
+      logger.error("fetch_product_by_id_failed", {
+        endpoint,
+        product_id: productId,
+        status_code: response.status,
+        error_code: errorData.error_code,
+        error_message: errorData.error_message,
+        is_not_found: isNotFound,
+        operation: "fetchProductById",
+      });
+
+      throw new ApiError(response.status, errorData);
+    }
+
+    const data: Product = await response.json();
+
+    logger.info("product_fetched_successfully", {
+      endpoint,
+      product_id: productId,
+      product_name: data.product_name,
+      operation: "fetchProductById",
+    });
+
+    return data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    logger.error("network_error", {
+      endpoint,
+      product_id: productId,
+      error_message: errorMessage,
+      error_type: "network_failure",
+      fix_suggestion: `Check that backend server is running at ${API_BASE_URL}`,
+      operation: "fetchProductById",
+    });
+
+    throw new Error(`Network error while fetching product ${productId}: ${errorMessage}`);
+  }
+}
+
+/**
+ * Fetch related products for a specific product.
+ *
+ * Backend endpoint: GET /api/products/{product_id}/related
+ * Response model: ProductListResponse
+ *
+ * @param productId - ID of product to find related items for
+ * @param limit - Maximum number of related products (default 4)
+ * @returns ProductListResponse with related products
+ * @throws ApiError if product not found or API error
+ * @throws Error if network failure
+ *
+ * Example usage:
+ * ```typescript
+ * const related = await fetchRelatedProducts(1, 4);
+ * console.log(`Found ${related.total_count} related products`);
+ * ```
+ */
+export async function fetchRelatedProducts(productId: number, limit: number = 4): Promise<ProductListResponse> {
+  const endpoint = `/api/products/${productId}/related`;
+  const url = `${API_BASE_URL}${endpoint}?limit=${limit}`;
+
+  logger.info("fetching_related_products", {
+    endpoint,
+    product_id: productId,
+    limit,
+    operation: "fetchRelatedProducts",
+  });
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      let errorData: ErrorResponse;
+
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = {
+          error_code: "unknown_error",
+          error_message: `HTTP ${response.status}: ${response.statusText}`,
+          timestamp_utc: new Date().toISOString(),
+        };
+      }
+
+      logger.error("fetch_related_products_failed", {
+        endpoint,
+        product_id: productId,
+        status_code: response.status,
+        error_code: errorData.error_code,
+        operation: "fetchRelatedProducts",
+      });
+
+      throw new ApiError(response.status, errorData);
+    }
+
+    const data: ProductListResponse = await response.json();
+
+    logger.info("related_products_fetched_successfully", {
+      endpoint,
+      product_id: productId,
+      related_products_count: data.total_count,
+      operation: "fetchRelatedProducts",
+    });
+
+    return data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    logger.error("network_error", {
+      endpoint,
+      product_id: productId,
+      error_message: errorMessage,
+      error_type: "network_failure",
+      fix_suggestion: `Check that backend server is running at ${API_BASE_URL}`,
+      operation: "fetchRelatedProducts",
+    });
+
+    throw new Error(`Network error while fetching related products for ${productId}: ${errorMessage}`);
   }
 }

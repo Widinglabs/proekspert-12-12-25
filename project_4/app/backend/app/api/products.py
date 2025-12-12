@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.logging_config import StructuredLogger
 from app.models.error import ErrorResponse
-from app.models.product import PaginationMetadata, ProductListResponse
+from app.models.product import PaginationMetadata, Product, ProductListResponse
 from app.services import product_service
 
 # Initialize router for product endpoints
@@ -179,3 +179,127 @@ async def get_products(
         total_count=total_count,
         pagination=pagination_metadata,
     )
+
+
+@router.get("/{product_id}", response_model=Product, responses={404: {"model": ErrorResponse}})
+async def get_product_by_id(
+    product_id: int,
+) -> Product | JSONResponse:
+    """
+    Get a single product by its ID.
+
+    Args:
+        product_id: Unique identifier of the product (must be positive integer)
+
+    Returns:
+        Product object with full details
+
+    Raises:
+        HTTPException: 404 error if product_id doesn't exist
+
+    Example Response:
+        {
+            "product_id": 1,
+            "product_name": "Wireless Bluetooth Mouse",
+            "product_description": "Ergonomic wireless mouse...",
+            "product_price_usd": "29.99",
+            "product_category": "electronics",
+            "product_stock_quantity": 15
+        }
+    """
+    logger.info(
+        "api_request_received",
+        endpoint=f"/api/products/{product_id}",
+        http_method="GET",
+        product_id=product_id,
+        operation="get_product_by_id",
+    )
+
+    product = product_service.get_product_by_id(product_id)
+
+    if product is None:
+        logger.warning(
+            "product_not_found_api",
+            product_id=product_id,
+            endpoint=f"/api/products/{product_id}",
+            fix_suggestion="Verify product_id exists in the catalog",
+        )
+        return JSONResponse(
+            status_code=404,
+            content=ErrorResponse(
+                error_code="product_not_found",
+                error_message=f"Product with ID {product_id} not found",
+                error_details={"product_id": product_id},
+            ).model_dump(),
+        )
+
+    logger.info(
+        "api_response_prepared",
+        endpoint=f"/api/products/{product_id}",
+        product_id=product_id,
+        product_name=product.product_name,
+        operation="get_product_by_id",
+    )
+
+    return product
+
+
+@router.get("/{product_id}/related", response_model=ProductListResponse, responses={404: {"model": ErrorResponse}})
+async def get_related_products_endpoint(
+    product_id: int,
+    limit: int = Query(default=4, ge=1, le=10, description="Maximum number of related products to return"),
+) -> ProductListResponse | JSONResponse:
+    """
+    Get related products for a specific product.
+
+    Returns products from the same category as the specified product,
+    excluding the product itself.
+
+    Args:
+        product_id: ID of the product to find related items for
+        limit: Maximum number of related products (1-10, default 4)
+
+    Returns:
+        ProductListResponse with related products
+
+    Raises:
+        HTTPException: 404 if product_id doesn't exist
+    """
+    logger.info(
+        "api_request_received",
+        endpoint=f"/api/products/{product_id}/related",
+        http_method="GET",
+        product_id=product_id,
+        limit=limit,
+        operation="get_related_products",
+    )
+
+    # Verify the product exists
+    product = product_service.get_product_by_id(product_id)
+    if product is None:
+        logger.warning(
+            "product_not_found_api",
+            product_id=product_id,
+            endpoint=f"/api/products/{product_id}/related",
+            fix_suggestion="Verify product_id exists before requesting related products",
+        )
+        return JSONResponse(
+            status_code=404,
+            content=ErrorResponse(
+                error_code="product_not_found",
+                error_message=f"Product with ID {product_id} not found",
+                error_details={"product_id": product_id},
+            ).model_dump(),
+        )
+
+    related_products = product_service.get_related_products(product_id, limit)
+
+    logger.info(
+        "api_response_prepared",
+        endpoint=f"/api/products/{product_id}/related",
+        product_id=product_id,
+        related_products_count=len(related_products),
+        operation="get_related_products",
+    )
+
+    return ProductListResponse(products=related_products, total_count=len(related_products))
