@@ -16,12 +16,16 @@
  * ```
  */
 
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { logger } from "@/lib/logger";
 import { trackProductView } from "@/lib/recently-viewed-storage";
+import { fetchProductReviews } from "@/lib/api-client";
 import type { Product } from "@/types/product";
+import type { ProductRatingStats } from "@/types/review";
+import { StarRating } from "./StarRating";
 
 interface ProductCardProps {
   /** Product object to display (matches backend Product model) */
@@ -43,6 +47,7 @@ interface ProductCardProps {
  * - Heart icon to toggle favorite status
  * - Click tracking for recently viewed
  * - Link to product detail page
+ * - Average rating display (if reviews exist)
  * - Responsive layout
  *
  * @param product - Product data from API
@@ -50,6 +55,16 @@ interface ProductCardProps {
  * @param onToggleFavorite - Callback to toggle favorite status
  */
 export function ProductCard({ product, isFavorited, onToggleFavorite }: ProductCardProps) {
+  // State for rating statistics
+  const [ratingStats, setRatingStats] = useState<ProductRatingStats | null>(null);
+
+  // Fetch rating stats for this product on mount
+  useEffect(() => {
+    fetchProductReviews(product.product_id)
+      .then((data) => setRatingStats(data.rating_stats))
+      .catch(() => setRatingStats(null));
+  }, [product.product_id]);
+
   /**
    * Handle product card click to track view in localStorage.
    */
@@ -108,6 +123,13 @@ export function ProductCard({ product, isFavorited, onToggleFavorite }: ProductC
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <CardTitle className="text-lg line-clamp-2">{product.product_name}</CardTitle>
+              {/* Star rating display (if reviews exist) */}
+              {ratingStats && ratingStats.total_review_count > 0 && (
+                <div className="flex items-center gap-2 mt-1">
+                  <StarRating rating={ratingStats.average_rating} size={14} />
+                  <span className="text-sm text-gray-600">({ratingStats.total_review_count})</span>
+                </div>
+              )}
               <span
                 className={`inline-block mt-1 px-2 py-1 text-xs font-medium rounded-md whitespace-nowrap ${categoryColor}`}
               >
