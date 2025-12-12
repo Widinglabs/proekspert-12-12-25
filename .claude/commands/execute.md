@@ -71,6 +71,31 @@ After all tasks complete:
 - Ensure story requirements satisfied
 - Move completed PRP to PRPs/completed/ create the folder if it does not exist
 
+When you are done create a report and send it to the user in the following format
+Also save it to execution-report#.md
+
+```
+### Tasks
+
+| #   | Task        | Status |
+| --- | ----------- | ------ |
+| 1   | [from plan] | ✅/❌  |
+
+### Validation Results
+
+| Check                            | Result |
+| -------------------------------- | ------ |
+| [from plan's validation section] | ✅/❌  |
+
+### Deviations from Plan
+
+- [What you changed and why]
+
+### Issues Encountered
+
+- [Problems and how you solved them]
+```
+
 ## Execution Rules
 
 **Validation Gates**: Each task must pass validation, iterate until passed
@@ -93,3 +118,7 @@ When a task fails validation:
 - Full test suite green
 - Story acceptance criteria met
 - Code follows project conventions
+
+```
+
+```
