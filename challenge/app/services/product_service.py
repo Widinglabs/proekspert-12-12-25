@@ -5,6 +5,8 @@ This service layer separates business logic from API routing logic,
 making the code more testable and maintainable.
 """
 
+from decimal import Decimal
+
 from app.models.product import Product
 from app.data.seed_products import get_seed_products
 from app.core.logging_config import StructuredLogger
@@ -46,3 +48,65 @@ def get_all_products() -> list[Product]:
     )
 
     return _PRODUCTS_DATABASE
+
+
+def filter_products(
+    min_price_usd: Decimal | None = None,
+    max_price_usd: Decimal | None = None,
+    category: str | None = None,
+    search_keyword: str | None = None,
+) -> list[Product]:
+    """
+    Filter products by price range, category, and/or keyword search.
+
+    All filters are optional and use AND logic when combined.
+
+    Args:
+        min_price_usd: Minimum price filter (inclusive)
+        max_price_usd: Maximum price filter (inclusive)
+        category: Category to filter by (exact match)
+        search_keyword: Keyword to search in product name or description (case-insensitive)
+
+    Returns:
+        List of products matching all provided filters
+
+    Example:
+        >>> products = filter_products(min_price_usd=Decimal("50"), category="electronics")
+        >>> all(p.product_price_usd >= Decimal("50") for p in products)
+        True
+    """
+    logger.info(
+        "filtering_products",
+        min_price_usd=str(min_price_usd) if min_price_usd else None,
+        max_price_usd=str(max_price_usd) if max_price_usd else None,
+        category=category,
+        search_keyword=search_keyword,
+        operation="filter_products"
+    )
+
+    result = _PRODUCTS_DATABASE
+
+    if min_price_usd is not None:
+        result = [p for p in result if p.product_price_usd >= min_price_usd]
+
+    if max_price_usd is not None:
+        result = [p for p in result if p.product_price_usd <= max_price_usd]
+
+    if category is not None:
+        result = [p for p in result if p.product_category == category]
+
+    if search_keyword is not None:
+        keyword_lower = search_keyword.lower()
+        result = [
+            p for p in result
+            if keyword_lower in p.product_name.lower()
+            or keyword_lower in p.product_description.lower()
+        ]
+
+    logger.info(
+        "products_filtered_successfully",
+        products_returned=len(result),
+        operation="filter_products"
+    )
+
+    return result

@@ -5,8 +5,13 @@ This module defines all HTTP endpoints related to product operations.
 Each endpoint delegates business logic to the service layer.
 """
 
-from fastapi import APIRouter
+from decimal import Decimal
+
+from fastapi import APIRouter, Query
+from fastapi.responses import JSONResponse
+
 from app.models.product import ProductListResponse
+from app.models.error import ErrorResponse
 from app.services import product_service
 from app.core.logging_config import StructuredLogger
 
@@ -18,16 +23,23 @@ logger = StructuredLogger(__name__)
 
 
 @router.get("", response_model=ProductListResponse)
-async def get_products() -> ProductListResponse:
+async def get_products(
+    min_price_usd: Decimal | None = Query(default=None, ge=0),
+    max_price_usd: Decimal | None = Query(default=None, ge=0),
+    category: str | None = Query(default=None),
+    search_keyword: str | None = Query(default=None),
+) -> ProductListResponse | JSONResponse:
     """
-    Get all products from the catalog.
+    Get products from the catalog with optional filtering.
 
-    This endpoint returns all products currently available in the catalog.
-    In the future, this endpoint will support filtering by price, category,
-    and keyword search (that's what you'll be adding in the exercise!).
+    Args:
+        min_price_usd: Minimum price filter (inclusive)
+        max_price_usd: Maximum price filter (inclusive)
+        category: Filter by product category
+        search_keyword: Search in product name or description (case-insensitive)
 
     Returns:
-        ProductListResponse containing list of products and total count
+        ProductListResponse containing filtered products and total count
 
     Example Response:
         {
@@ -49,11 +61,41 @@ async def get_products() -> ProductListResponse:
         "api_request_received",
         endpoint="/api/products",
         http_method="GET",
+        min_price_usd=str(min_price_usd) if min_price_usd else None,
+        max_price_usd=str(max_price_usd) if max_price_usd else None,
+        category=category,
+        search_keyword=search_keyword,
         operation="get_products"
     )
 
+    # Validate price range
+    if min_price_usd is not None and max_price_usd is not None:
+        if min_price_usd > max_price_usd:
+            logger.info(
+                "invalid_price_range",
+                min_price_usd=str(min_price_usd),
+                max_price_usd=str(max_price_usd),
+                operation="get_products"
+            )
+            return JSONResponse(
+                status_code=400,
+                content=ErrorResponse(
+                    error_code="invalid_price_range",
+                    error_message="Minimum price cannot exceed maximum price",
+                    error_details={
+                        "min_price_usd": str(min_price_usd),
+                        "max_price_usd": str(max_price_usd),
+                    },
+                ).model_dump(),
+            )
+
     # Delegate to service layer for business logic
-    products = product_service.get_all_products()
+    products = product_service.filter_products(
+        min_price_usd=min_price_usd,
+        max_price_usd=max_price_usd,
+        category=category,
+        search_keyword=search_keyword,
+    )
 
     logger.info(
         "api_response_prepared",
