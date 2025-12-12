@@ -5,12 +5,14 @@
  * - Category selection (dropdown)
  * - Price range (min/max inputs)
  * - Keyword search (text input)
+ * - Favorites filter (checkbox)
  *
  * Uses React Hook Form + Zod for form validation and state management.
  * Logs all filter operations with structured JSON for debugging.
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useId } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -81,6 +83,12 @@ interface ProductFiltersProps {
   onFilterChange: (filters: ProductFilterParams) => void;
   /** Whether the product list is currently loading */
   loading?: boolean;
+  /** Whether to show only favorited products */
+  showFavoritesOnly: boolean;
+  /** Callback when favorites toggle is changed */
+  onShowFavoritesToggle: (showFavoritesOnly: boolean) => void;
+  /** Total number of favorited products */
+  totalFavorites: number;
 }
 
 /**
@@ -91,8 +99,20 @@ interface ProductFiltersProps {
  *
  * @param onFilterChange - Callback invoked when filters change
  * @param loading - Disables form controls while loading
+ * @param showFavoritesOnly - Whether to show only favorited products
+ * @param onShowFavoritesToggle - Callback when favorites toggle changes
+ * @param totalFavorites - Total number of favorited products
  */
-export function ProductFilters({ onFilterChange, loading = false }: ProductFiltersProps) {
+export function ProductFilters({
+  onFilterChange,
+  loading = false,
+  showFavoritesOnly,
+  onShowFavoritesToggle,
+  totalFavorites,
+}: ProductFiltersProps) {
+  // Generate unique ID for favorites checkbox for accessibility
+  const favoritesCheckboxId = useId();
+
   const form = useForm<FilterFormValues>({
     resolver: zodResolver(filterFormSchema),
     defaultValues: {
@@ -154,6 +174,29 @@ export function ProductFilters({ onFilterChange, loading = false }: ProductFilte
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="mb-6 rounded-lg border bg-card p-4">
+        {/* Favorites Toggle - separate from main filter grid */}
+        <div className="flex items-center gap-2 mb-4 pb-4 border-b">
+          <input
+            type="checkbox"
+            id={favoritesCheckboxId}
+            checked={showFavoritesOnly}
+            onChange={(e) => {
+              onShowFavoritesToggle(e.target.checked);
+              logger.info("favorites_filter_toggled_ui", {
+                show_favorites_only: e.target.checked,
+                total_favorites: totalFavorites,
+                operation: "toggle_favorites_filter",
+              });
+            }}
+            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            disabled={loading}
+          />
+          <label htmlFor={favoritesCheckboxId} className="text-sm font-medium cursor-pointer select-none">
+            Show Favorites Only{" "}
+            {totalFavorites > 0 && <span className="text-muted-foreground">({totalFavorites})</span>}
+          </label>
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           {/* Category Select */}
           <FormField

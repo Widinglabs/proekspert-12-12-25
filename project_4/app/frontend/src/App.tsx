@@ -24,6 +24,7 @@ import { ProductGrid } from "@/components/ProductGrid";
 import { RecentlyViewedProducts } from "@/components/RecentlyViewedProducts";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { fetchProducts } from "@/lib/api-client";
+import { loadFavorites, saveFavorites, toggleFavorite } from "@/lib/favorites";
 import { logger } from "@/lib/logger";
 import { getRecentlyViewedProductIds } from "@/lib/recently-viewed-storage";
 import { ThemeProvider } from "@/lib/theme-provider";
@@ -55,6 +56,12 @@ export function App() {
 
   // State for recently viewed product IDs
   const [recentlyViewedProductIds, setRecentlyViewedProductIds] = useState<number[]>([]);
+
+  // State for favorited product IDs (Set for O(1) lookup)
+  const [favoritedProductIds, setFavoritedProductIds] = useState<Set<number>>(new Set());
+
+  // State for favorites-only filter toggle
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
 
   /**
    * Fetch products from backend API with optional filters.
@@ -128,6 +135,36 @@ export function App() {
     [loadProducts]
   );
 
+  /**
+   * Handle toggling a product's favorite status.
+   *
+   * Updates state and persists to localStorage.
+   */
+  const handleToggleFavorite = useCallback((productId: number) => {
+    setFavoritedProductIds((currentFavorites) => {
+      const newFavorites = toggleFavorite(productId, currentFavorites);
+      saveFavorites(newFavorites);
+      return newFavorites;
+    });
+  }, []);
+
+  /**
+   * Handle toggling the "show favorites only" filter.
+   *
+   * Logs the operation for debugging.
+   */
+  const handleShowFavoritesToggle = useCallback(
+    (showOnly: boolean) => {
+      setShowFavoritesOnly(showOnly);
+      logger.info("favorites_filter_toggled", {
+        show_favorites_only: showOnly,
+        total_favorites: favoritedProductIds.size,
+        operation: "toggle_favorites_filter",
+      });
+    },
+    [favoritedProductIds.size]
+  );
+
   // Load products on component mount
   useEffect(() => {
     loadProducts();
@@ -157,6 +194,17 @@ export function App() {
     };
   }, []);
 
+  // Load favorites from localStorage on component mount
+  useEffect(() => {
+    const favorites = loadFavorites();
+    setFavoritedProductIds(favorites);
+  }, []);
+
+  // Filter products based on favorites toggle
+  const displayedProducts = showFavoritesOnly
+    ? products.filter((product) => favoritedProductIds.has(product.product_id))
+    : products;
+
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-background">
@@ -171,7 +219,9 @@ export function App() {
                     ? "Loading products..."
                     : error
                       ? "Error loading products"
-                      : `Browse our collection of ${products.length} products`}
+                      : showFavoritesOnly
+                        ? `Showing ${displayedProducts.length} favorite products`
+                        : `Browse our collection of ${products.length} products (${favoritedProductIds.size} favorites)`}
                 </p>
               </div>
               <ThemeToggle />
@@ -182,7 +232,13 @@ export function App() {
         {/* Main content area */}
         <main className="container mx-auto px-4 py-8">
           {/* Filter controls */}
-          <ProductFilters onFilterChange={handleFilterChange} loading={loading} />
+          <ProductFilters
+            onFilterChange={handleFilterChange}
+            loading={loading}
+            showFavoritesOnly={showFavoritesOnly}
+            onShowFavoritesToggle={handleShowFavoritesToggle}
+            totalFavorites={favoritedProductIds.size}
+          />
 
           {/* Recently Viewed Section - only show if products loaded and has viewed items */}
           {!loading && !error && recentlyViewedProductIds.length > 0 && (
@@ -232,7 +288,13 @@ export function App() {
             </div>
           ) : (
             // Success/Loading state - show product grid
-            <ProductGrid products={products} loading={loading} />
+            <ProductGrid
+              products={displayedProducts}
+              loading={loading}
+              favoritedProductIds={favoritedProductIds}
+              onToggleFavorite={handleToggleFavorite}
+              showingFavoritesOnly={showFavoritesOnly}
+            />
           )}
         </main>
 

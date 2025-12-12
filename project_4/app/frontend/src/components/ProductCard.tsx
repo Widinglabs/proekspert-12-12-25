@@ -16,6 +16,7 @@
  * ```
  */
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { logger } from "@/lib/logger";
 import { trackProductView } from "@/lib/recently-viewed-storage";
@@ -24,6 +25,10 @@ import type { Product } from "@/types/product";
 interface ProductCardProps {
   /** Product object to display (matches backend Product model) */
   product: Product;
+  /** Whether this product is favorited */
+  isFavorited: boolean;
+  /** Callback when favorite button is clicked */
+  onToggleFavorite: (productId: number) => void;
 }
 
 /**
@@ -34,11 +39,15 @@ interface ProductCardProps {
  * - Formatted price in USD
  * - Category badge with color coding
  * - Stock status indicator
+ * - Heart icon to toggle favorite status
+ * - Click tracking for recently viewed
  * - Responsive layout
  *
  * @param product - Product data from API
+ * @param isFavorited - Whether product is in favorites
+ * @param onToggleFavorite - Callback to toggle favorite status
  */
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, isFavorited, onToggleFavorite }: ProductCardProps) {
   /**
    * Handle product card click to track view in localStorage.
    */
@@ -50,6 +59,7 @@ export function ProductCard({ product }: ProductCardProps) {
     });
     trackProductView(product.product_id);
   };
+
 
   // Format price as USD currency
   // Backend sends Decimal as string, parse to number for formatting
@@ -72,6 +82,20 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const categoryColor = categoryColors[product.product_category] || "bg-gray-100 text-gray-800";
 
+  /**
+   * Handle favorite button click.
+   * Prevents event propagation and logs the operation.
+   */
+  const handleFavoriteClick = (event: React.MouseEvent) => {
+    event.preventDefault(); // Prevent card click if card becomes clickable later
+    onToggleFavorite(product.product_id);
+    logger.info(isFavorited ? "favorite_removed" : "favorite_added", {
+      product_id: product.product_id,
+      product_name: product.product_name,
+      operation: "toggle_favorite_from_card",
+    });
+  };
+
   return (
     <Card
       className="h-full flex flex-col transition-shadow hover:shadow-lg cursor-pointer"
@@ -79,10 +103,40 @@ export function ProductCard({ product }: ProductCardProps) {
     >
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg line-clamp-2 flex-1">{product.product_name}</CardTitle>
-          <span className={`px-2 py-1 text-xs font-medium rounded-md whitespace-nowrap ${categoryColor}`}>
-            {product.product_category}
-          </span>
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-lg line-clamp-2">{product.product_name}</CardTitle>
+            <span
+              className={`inline-block mt-1 px-2 py-1 text-xs font-medium rounded-md whitespace-nowrap ${categoryColor}`}
+            >
+              {product.product_category}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 flex-shrink-0"
+            onClick={handleFavoriteClick}
+            aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
+          >
+            {isFavorited ? (
+              // Filled heart for favorited
+              <svg className="w-5 h-5 fill-red-500 text-red-500" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
+              </svg>
+            ) : (
+              // Outline heart for not favorited
+              <svg
+                className="w-5 h-5 text-gray-400 hover:text-red-500 transition-colors"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+              >
+                <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
+              </svg>
+            )}
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
