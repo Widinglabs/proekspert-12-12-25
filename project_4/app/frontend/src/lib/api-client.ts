@@ -14,7 +14,7 @@
  */
 
 import { ApiError, type ErrorResponse } from "@/types/error";
-import type { ProductListResponse } from "@/types/product";
+import type { ProductFilterParams, ProductListResponse } from "@/types/product";
 import { logger } from "./logger";
 
 /**
@@ -26,11 +26,47 @@ import { logger } from "./logger";
 const API_BASE_URL = "http://localhost:8000";
 
 /**
- * Fetch all products from the catalog API.
+ * Build query string from filter parameters.
+ *
+ * Maps frontend filter param names to backend query param names:
+ * - minimum_price_usd -> min_price_usd
+ * - maximum_price_usd -> max_price_usd
+ * - category -> category
+ * - search_keyword -> search_keyword
+ *
+ * @param filters - Optional filter parameters
+ * @returns Query string (without leading ?) or empty string if no filters
+ */
+function buildFilterQueryString(filters?: ProductFilterParams): string {
+  if (!filters) {
+    return "";
+  }
+
+  const params = new URLSearchParams();
+
+  if (filters.minimum_price_usd !== undefined) {
+    params.append("min_price_usd", filters.minimum_price_usd.toString());
+  }
+  if (filters.maximum_price_usd !== undefined) {
+    params.append("max_price_usd", filters.maximum_price_usd.toString());
+  }
+  if (filters.category) {
+    params.append("category", filters.category);
+  }
+  if (filters.search_keyword) {
+    params.append("search_keyword", filters.search_keyword);
+  }
+
+  return params.toString();
+}
+
+/**
+ * Fetch products from the catalog API with optional filtering.
  *
  * Backend endpoint: GET /api/products
  * Response model: ProductListResponse
  *
+ * @param filters - Optional filter parameters for price, category, and keyword search
  * @returns ProductListResponse with products array and total count
  * @throws ApiError if backend returns error response (4xx/5xx)
  * @throws Error if network failure or unable to reach backend
@@ -38,8 +74,15 @@ const API_BASE_URL = "http://localhost:8000";
  * Example usage:
  * ```typescript
  * try {
- *   const response = await fetchProducts();
- *   console.log(`Loaded ${response.total_count} products`);
+ *   // Fetch all products
+ *   const allProducts = await fetchProducts();
+ *
+ *   // Fetch filtered products
+ *   const filtered = await fetchProducts({
+ *     category: "electronics",
+ *     minimum_price_usd: 25,
+ *     maximum_price_usd: 100
+ *   });
  * } catch (error) {
  *   if (error instanceof ApiError) {
  *     console.error(`API Error: ${error.errorResponse.error_code}`);
@@ -49,13 +92,15 @@ const API_BASE_URL = "http://localhost:8000";
  * }
  * ```
  */
-export async function fetchProducts(): Promise<ProductListResponse> {
+export async function fetchProducts(filters?: ProductFilterParams): Promise<ProductListResponse> {
   const endpoint = "/api/products";
-  const url = `${API_BASE_URL}${endpoint}`;
+  const queryString = buildFilterQueryString(filters);
+  const url = `${API_BASE_URL}${endpoint}${queryString ? `?${queryString}` : ""}`;
 
   logger.info("fetching_products", {
     endpoint,
     url,
+    filters: filters ?? null,
     operation: "fetchProducts",
   });
 

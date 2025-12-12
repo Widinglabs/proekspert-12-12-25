@@ -92,3 +92,52 @@ class ProductListResponse(BaseModel):
     products: list[Product] = Field(..., description="List of products matching the request criteria")
 
     total_count: int = Field(..., description="Total number of products in this response", ge=0)
+
+
+class ProductFilterParameters(BaseModel):
+    """
+    Query parameters for filtering products in the catalog.
+
+    All parameters are optional. When multiple parameters are provided,
+    they are combined with AND logic (all conditions must match).
+
+    Attributes:
+        min_price_usd: Minimum price filter (inclusive)
+        max_price_usd: Maximum price filter (inclusive)
+        category: Filter by product category
+        search_keyword: Search in product name and description (case-insensitive)
+
+    Examples:
+        >>> ProductFilterParameters(
+        ...     min_price_usd=Decimal("25.00"),
+        ...     max_price_usd=Decimal("100.00"),
+        ...     category="electronics"
+        ... )
+    """
+
+    min_price_usd: Decimal | None = Field(
+        default=None,
+        ge=0,
+        description="Minimum price in USD (inclusive)",
+        examples=["10.00", "25.00", "100.00"],
+    )
+
+    max_price_usd: Decimal | None = Field(
+        default=None,
+        ge=0,
+        description="Maximum price in USD (inclusive)",
+        examples=["50.00", "100.00", "500.00"],
+    )
+
+    category: ProductCategory | None = Field(
+        default=None,
+        description="Filter by product category",
+        examples=["electronics", "clothing", "home"],
+    )
+
+    search_keyword: str | None = Field(
+        default=None,
+        max_length=100,
+        description="Search keyword for product name and description (case-insensitive)",
+        examples=["wireless", "cotton", "smart"],
+    )
