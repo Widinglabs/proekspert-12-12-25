@@ -56,6 +56,9 @@ function buildFilterQueryString(filters?: ProductFilterParams): string {
   if (filters.search_keyword) {
     params.append("search_keyword", filters.search_keyword);
   }
+  if (filters.sort_by) {
+    params.append("sort_by", filters.sort_by);
+  }
 
   return params.toString();
 }

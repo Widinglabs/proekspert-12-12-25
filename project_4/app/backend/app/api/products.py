@@ -28,6 +28,11 @@ async def get_products(
     max_price_usd: Decimal | None = Query(default=None, ge=0, description="Maximum price in USD (inclusive)"),
     category: str | None = Query(default=None, description="Filter by product category"),
     search_keyword: str | None = Query(default=None, max_length=100, description="Search in name and description"),
+    sort_by: str | None = Query(
+        default=None,
+        description="Sort order: price_asc, price_desc, name_asc, name_desc, newest",
+        pattern="^(price_asc|price_desc|name_asc|name_desc|newest)$",
+    ),
 ) -> ProductListResponse | JSONResponse:
     """
     Get products from the catalog with optional filtering.
@@ -41,6 +46,7 @@ async def get_products(
         max_price_usd: Maximum price filter (inclusive)
         category: Filter by product category (electronics, clothing, home, sports, books)
         search_keyword: Search keyword for product name and description (case-insensitive)
+        sort_by: Sort order (price_asc, price_desc, name_asc, name_desc, newest)
 
     Returns:
         ProductListResponse containing list of filtered products and total count
@@ -72,6 +78,7 @@ async def get_products(
         max_price_usd=str(max_price_usd) if max_price_usd is not None else None,
         category=category,
         search_keyword=search_keyword,
+        sort_by=sort_by,
         operation="get_products",
     )
 
@@ -93,18 +100,20 @@ async def get_products(
             ).model_dump(),
         )
 
-    # Delegate to service layer for filtering
+    # Delegate to service layer for filtering and sorting
     products = product_service.filter_products(
         min_price_usd=min_price_usd,
         max_price_usd=max_price_usd,
         category=category,
         search_keyword=search_keyword,
+        sort_by=sort_by,
     )
 
     logger.info(
         "api_response_prepared",
         endpoint="/api/products",
         products_count=len(products),
+        sort_by=sort_by,
         operation="get_products",
     )
 

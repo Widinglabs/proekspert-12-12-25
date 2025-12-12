@@ -91,5 +91,5 @@ export interface ProductFilterParams {
   search_keyword?: string;
 
   /** Sort order for results */
-  sort_by?: "price_asc" | "price_desc" | "name_asc" | "name_desc";
+  sort_by?: "price_asc" | "price_desc" | "name_asc" | "name_desc" | "newest";
 }
