@@ -73,28 +73,78 @@ class Product(BaseModel):
     product_in_stock: bool = Field(default=True, description="Whether the product is currently available for purchase")
 
 
+class PaginationMetadata(BaseModel):
+    """
+    Pagination metadata for paginated API responses.
+
+    Provides all information needed for clients to navigate paginated results,
+    including current position and available navigation options.
+
+    Attributes:
+        page_number: Current page number (1-based indexing)
+        page_size: Number of items per page
+        total_count: Total number of items across all pages
+        total_pages: Total number of pages
+        has_previous_page: Whether a previous page exists
+        has_next_page: Whether a next page exists
+
+    Examples:
+        >>> PaginationMetadata(
+        ...     page_number=2,
+        ...     page_size=10,
+        ...     total_count=30,
+        ...     total_pages=3,
+        ...     has_previous_page=True,
+        ...     has_next_page=True
+        ... )
+    """
+
+    page_number: int = Field(..., description="Current page number (1-based)", ge=1)
+
+    page_size: int = Field(..., description="Number of items per page", ge=1)
+
+    total_count: int = Field(..., description="Total number of items across all pages", ge=0)
+
+    total_pages: int = Field(..., description="Total number of pages", ge=0)
+
+    has_previous_page: bool = Field(..., description="Whether a previous page exists")
+
+    has_next_page: bool = Field(..., description="Whether a next page exists")
+
+
 class ProductListResponse(BaseModel):
     """
-    Response model for endpoints that return a list of products.
+    Response model for endpoints that return a paginated list of products.
 
     Using a wrapper object (instead of returning a raw list) makes the API
     more extensible - we can easily add metadata like total_count, pagination,
     etc. in the future without breaking changes.
 
     Attributes:
-        products: List of product objects
-        total_count: Number of products in the response
+        products: List of product objects for the current page
+        total_count: Total number of products matching criteria (across all pages)
+        pagination: Pagination metadata for navigation
 
     Examples:
         >>> ProductListResponse(
         ...     products=[product1, product2, product3],
-        ...     total_count=3
+        ...     total_count=30,
+        ...     pagination=PaginationMetadata(
+        ...         page_number=1,
+        ...         page_size=10,
+        ...         total_count=30,
+        ...         total_pages=3,
+        ...         has_previous_page=False,
+        ...         has_next_page=True
+        ...     )
         ... )
     """
 
-    products: list[Product] = Field(..., description="List of products matching the request criteria")
+    products: list[Product] = Field(..., description="List of products for current page")
 
-    total_count: int = Field(..., description="Total number of products in this response", ge=0)
+    total_count: int = Field(..., description="Total number of products matching criteria", ge=0)
+
+    pagination: PaginationMetadata = Field(..., description="Pagination metadata")
 
 
 class ProductFilterParameters(BaseModel):

@@ -54,6 +54,40 @@ export interface Product {
 }
 
 /**
+ * Pagination metadata matching backend PaginationMetadata model.
+ *
+ * Backend definition:
+ * ```python
+ * class PaginationMetadata(BaseModel):
+ *     page_number: int = Field(..., ge=1)
+ *     page_size: int = Field(..., ge=1)
+ *     total_count: int = Field(..., ge=0)
+ *     total_pages: int = Field(..., ge=0)
+ *     has_previous_page: bool
+ *     has_next_page: bool
+ * ```
+ */
+export interface PaginationMetadata {
+  /** Current page number (1-based) */
+  page_number: number;
+
+  /** Number of items per page */
+  page_size: number;
+
+  /** Total number of items across all pages */
+  total_count: number;
+
+  /** Total number of pages */
+  total_pages: number;
+
+  /** Whether a previous page exists */
+  has_previous_page: boolean;
+
+  /** Whether a next page exists */
+  has_next_page: boolean;
+}
+
+/**
  * Product list response matching backend ProductListResponse model.
  *
  * Backend definition:
@@ -61,21 +95,24 @@ export interface Product {
  * class ProductListResponse(BaseModel):
  *     products: list[Product] = Field(...)
  *     total_count: int = Field(..., ge=0)
+ *     pagination: PaginationMetadata = Field(...)
  * ```
  */
 export interface ProductListResponse {
-  /** Array of product objects */
+  /** Array of product objects for current page */
   products: Product[];
 
-  /** Total number of products in response (always >= 0) */
+  /** Total number of products matching criteria (always >= 0) */
   total_count: number;
+
+  /** Pagination metadata for navigation */
+  pagination: PaginationMetadata;
 }
 
 /**
- * Product filter parameters (for future implementation by students).
+ * Product filter parameters matching backend query parameters.
  *
- * These match the backend ProductFilterParameters that students will create.
- * Currently not implemented - will be added during the exercise.
+ * These match the backend API query parameters for filtering and pagination.
  */
 export interface ProductFilterParams {
   /** Filter products with price >= this amount */
@@ -92,4 +129,10 @@ export interface ProductFilterParams {
 
   /** Sort order for results */
   sort_by?: "price_asc" | "price_desc" | "name_asc" | "name_desc" | "newest";
+
+  /** Page number (1-based, default: 1) */
+  page_number?: number;
+
+  /** Items per page (10, 25, or 50, default: 10) */
+  page_size?: number;
 }

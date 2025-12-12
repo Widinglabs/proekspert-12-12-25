@@ -95,6 +95,10 @@ interface ProductFiltersProps {
   onShowFavoritesToggle: (showFavoritesOnly: boolean) => void;
   /** Total number of favorited products */
   totalFavorites: number;
+  /** Callback when page size is changed */
+  onPageSizeChange: (pageSize: number) => void;
+  /** Current page size */
+  currentPageSize: number;
 }
 
 /**
@@ -109,12 +113,15 @@ interface ProductFiltersProps {
  * @param onShowFavoritesToggle - Callback when favorites toggle changes
  * @param totalFavorites - Total number of favorited products
  */
+<<<<<<< HEAD
 export function ProductFilters({
   onFilterChange,
   loading = false,
   showFavoritesOnly,
   onShowFavoritesToggle,
   totalFavorites,
+  onPageSizeChange,
+  currentPageSize,
 }: ProductFiltersProps) {
   // Generate unique ID for favorites checkbox for accessibility
   const favoritesCheckboxId = useId();
@@ -186,27 +193,57 @@ export function ProductFilters({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="mb-6 rounded-lg border bg-card p-4">
-        {/* Favorites Toggle - separate from main filter grid */}
-        <div className="flex items-center gap-2 mb-4 pb-4 border-b">
-          <input
-            type="checkbox"
-            id={favoritesCheckboxId}
-            checked={showFavoritesOnly}
-            onChange={(e) => {
-              onShowFavoritesToggle(e.target.checked);
-              logger.info("favorites_filter_toggled_ui", {
-                show_favorites_only: e.target.checked,
-                total_favorites: totalFavorites,
-                operation: "toggle_favorites_filter",
-              });
-            }}
-            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-            disabled={loading}
-          />
-          <label htmlFor={favoritesCheckboxId} className="text-sm font-medium cursor-pointer select-none">
-            Show Favorites Only{" "}
-            {totalFavorites > 0 && <span className="text-muted-foreground">({totalFavorites})</span>}
-          </label>
+        {/* Favorites Toggle and Page Size - separate from main filter grid */}
+        <div className="flex items-center justify-between gap-4 mb-4 pb-4 border-b">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id={favoritesCheckboxId}
+              checked={showFavoritesOnly}
+              onChange={(e) => {
+                onShowFavoritesToggle(e.target.checked);
+                logger.info("favorites_filter_toggled_ui", {
+                  show_favorites_only: e.target.checked,
+                  total_favorites: totalFavorites,
+                  operation: "toggle_favorites_filter",
+                });
+              }}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              disabled={loading}
+            />
+            <label htmlFor={favoritesCheckboxId} className="text-sm font-medium cursor-pointer select-none">
+              Show Favorites Only{" "}
+              {totalFavorites > 0 && <span className="text-muted-foreground">({totalFavorites})</span>}
+            </label>
+          </div>
+
+          {/* Page Size Selector */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="page-size" className="text-sm font-medium whitespace-nowrap">
+              Items per page:
+            </label>
+            <Select
+              value={currentPageSize.toString()}
+              onValueChange={(value) => {
+                const newSize = Number.parseInt(value, 10);
+                onPageSizeChange(newSize);
+                logger.info("page_size_changed", {
+                  new_page_size: newSize,
+                  operation: "change_page_size",
+                });
+              }}
+              disabled={loading}
+            >
+              <SelectTrigger id="page-size" className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
