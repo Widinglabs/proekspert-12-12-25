@@ -25,7 +25,7 @@ class Product(BaseModel):
         product_description: Detailed description of the product
         product_price_usd: Price in US dollars (uses Decimal for precision)
         product_category: One of the predefined product categories
-        product_in_stock: Whether the product is currently available
+        product_stock_quantity: Current stock quantity available (0 = out of stock)
 
     Examples:
         >>> Product(
@@ -34,7 +34,7 @@ class Product(BaseModel):
         ...     product_description="Ergonomic wireless mouse with USB receiver",
         ...     product_price_usd=Decimal("29.99"),
         ...     product_category="electronics",
-        ...     product_in_stock=True
+        ...     product_stock_quantity=15
         ... )
     """
 
@@ -70,7 +70,12 @@ class Product(BaseModel):
         examples=["electronics", "clothing", "home", "sports", "books"],
     )
 
-    product_in_stock: bool = Field(default=True, description="Whether the product is currently available for purchase")
+    product_stock_quantity: int = Field(
+        ...,
+        description="Current stock quantity available for purchase (0 = out of stock)",
+        ge=0,
+        examples=[0, 3, 15, 42, 100],
+    )
 
 
 class PaginationMetadata(BaseModel):
@@ -159,12 +164,16 @@ class ProductFilterParameters(BaseModel):
         max_price_usd: Maximum price filter (inclusive)
         category: Filter by product category
         search_keyword: Search in product name and description (case-insensitive)
+        sort_by: Sort order for results
+        in_stock_only: Show only products with stock available (stock_quantity > 0)
 
     Examples:
         >>> ProductFilterParameters(
         ...     min_price_usd=Decimal("25.00"),
         ...     max_price_usd=Decimal("100.00"),
-        ...     category="electronics"
+        ...     category="electronics",
+        ...     sort_by="price_asc",
+        ...     in_stock_only=True
         ... )
     """
 
@@ -199,4 +208,10 @@ class ProductFilterParameters(BaseModel):
         default=None,
         description="Sort order for results (price_asc, price_desc, name_asc, name_desc, newest)",
         examples=["price_asc", "name_desc", "newest"],
+    )
+
+    in_stock_only: bool = Field(
+        default=False,
+        description="Filter to show only products with stock_quantity > 0",
+        examples=[True, False],
     )

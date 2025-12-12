@@ -28,7 +28,7 @@ export type ProductCategory = "electronics" | "clothing" | "home" | "sports" | "
  *     product_description: str = Field(..., min_length=1, max_length=1000)
  *     product_price_usd: Decimal = Field(..., gt=0, decimal_places=2)
  *     product_category: ProductCategory
- *     product_in_stock: bool = Field(default=True)
+ *     product_stock_quantity: int = Field(..., ge=0)
  * ```
  *
  * Note: Decimal from backend is serialized as string in JSON
@@ -49,8 +49,8 @@ export interface Product {
   /** Product category (one of 5 valid categories) */
   product_category: ProductCategory;
 
-  /** Whether product is currently available for purchase */
-  product_in_stock: boolean;
+  /** Current stock quantity available (0 = out of stock, 1-5 = low stock) */
+  product_stock_quantity: number;
 }
 
 /**
@@ -126,6 +126,9 @@ export interface ProductFilterParams {
 
   /** Search keyword in product name/description (case-insensitive) */
   search_keyword?: string;
+
+  /** Filter to show only products with stock available (stock_quantity > 0) */
+  in_stock_only?: boolean;
 
   /** Sort order for results */
   sort_by?: "price_asc" | "price_desc" | "name_asc" | "name_desc" | "newest";

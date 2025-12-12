@@ -52,15 +52,16 @@ def filter_products(
     category: str | None = None,
     search_keyword: str | None = None,
     sort_by: str | None = None,
+    in_stock_only: bool = False,
     page_number: int = 1,
     page_size: int = 10,
 ) -> tuple[list[Product], int]:
     """
-    Filter and sort products based on the provided criteria with pagination support.
+    Filter, sort, and paginate products based on the provided criteria.
 
     All filter parameters are optional. When multiple parameters are provided,
     they are combined with AND logic (all conditions must match). Sorting is
-    applied after filtering.
+    applied after filtering, and pagination is applied last.
 
     Args:
         min_price_usd: Minimum price filter (inclusive). Products with price >= this value.
@@ -68,6 +69,7 @@ def filter_products(
         category: Filter by product category (exact match).
         search_keyword: Search in product name and description (case-insensitive).
         sort_by: Sort order for results. Options: price_asc, price_desc, name_asc, name_desc, newest.
+        in_stock_only: If True, filter to products with stock_quantity > 0.
         page_number: Page number (1-based, default: 1).
         page_size: Number of items per page (default: 10).
 
@@ -90,6 +92,7 @@ def filter_products(
         category=category,
         search_keyword=search_keyword,
         sort_by=sort_by,
+        in_stock_only=in_stock_only,
         page_number=page_number,
         page_size=page_size,
         operation="filter_products",
@@ -119,6 +122,10 @@ def filter_products(
             if keyword_lower in product.product_name.lower() or keyword_lower in product.product_description.lower()
         ]
 
+    # Filter by stock availability if requested
+    if in_stock_only:
+        results = [product for product in results if product.product_stock_quantity > 0]
+
     # Apply sorting if requested
     if sort_by == "price_asc":
         results.sort(key=lambda p: p.product_price_usd)
@@ -144,6 +151,7 @@ def filter_products(
         total_results=total_count,
         returned_count=len(paginated_results),
         sort_by=sort_by,
+        in_stock_only=in_stock_only,
         page_number=page_number,
         page_size=page_size,
         operation="filter_products",

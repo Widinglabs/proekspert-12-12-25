@@ -5,6 +5,7 @@
  * - Category selection (dropdown)
  * - Price range (min/max inputs)
  * - Keyword search (text input)
+ * - Stock availability filter (checkbox)
  * - Favorites filter (checkbox)
  * - Sort order (dropdown)
  *
@@ -18,6 +19,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,6 +34,7 @@ import type { ProductCategory, ProductFilterParams } from "@/types/product";
  * - Category is one of the valid options (or empty for "All")
  * - Search keyword is max 100 characters
  * - Sort order is one of the valid options
+ * - In stock only is a boolean
  * - Min price <= max price when both are provided
  */
 const filterFormSchema = z
@@ -59,6 +62,7 @@ const filterFormSchema = z
       .enum(["price_asc", "price_desc", "name_asc", "name_desc", "newest"])
       .optional()
       .or(z.literal("").transform(() => undefined)),
+    in_stock_only: z.boolean().default(false),
   })
   .refine(
     (data) => {
@@ -112,8 +116,9 @@ interface ProductFiltersProps {
  * @param showFavoritesOnly - Whether to show only favorited products
  * @param onShowFavoritesToggle - Callback when favorites toggle changes
  * @param totalFavorites - Total number of favorited products
+ * @param onPageSizeChange - Callback when page size is changed
+ * @param currentPageSize - Current page size
  */
-<<<<<<< HEAD
 export function ProductFilters({
   onFilterChange,
   loading = false,
@@ -134,6 +139,7 @@ export function ProductFilters({
       category: undefined,
       search_keyword: "",
       sort_by: undefined,
+      in_stock_only: false,
     },
   });
 
@@ -158,6 +164,9 @@ export function ProductFilters({
     if (values.sort_by) {
       filters.sort_by = values.sort_by as ProductFilterParams["sort_by"];
     }
+    if (values.in_stock_only) {
+      filters.in_stock_only = values.in_stock_only;
+    }
 
     logger.info("filters_applied", {
       category: filters.category ?? null,
@@ -165,6 +174,7 @@ export function ProductFilters({
       maximum_price_usd: filters.maximum_price_usd ?? null,
       search_keyword: filters.search_keyword ?? null,
       sort_by: filters.sort_by ?? null,
+      in_stock_only: values.in_stock_only,
       operation: "apply_filters",
     });
 
@@ -181,6 +191,7 @@ export function ProductFilters({
       category: undefined,
       search_keyword: "",
       sort_by: undefined,
+      in_stock_only: false,
     });
 
     logger.info("filters_cleared", {
@@ -366,6 +377,22 @@ export function ProductFilters({
                   </SelectContent>
                 </Select>
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* In Stock Only Checkbox */}
+          <FormField
+            control={form.control}
+            name="in_stock_only"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-end space-x-3 space-y-0 pb-2">
+                <FormControl>
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={loading} />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel className="cursor-pointer">In Stock Only</FormLabel>
+                </div>
               </FormItem>
             )}
           />

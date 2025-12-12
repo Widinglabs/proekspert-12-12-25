@@ -33,6 +33,8 @@ const API_BASE_URL = "http://localhost:8000";
  * - maximum_price_usd -> max_price_usd
  * - category -> category
  * - search_keyword -> search_keyword
+ * - sort_by -> sort_by
+ * - in_stock_only -> in_stock_only
  * - page_number -> page_number
  * - page_size -> page_size
  *
@@ -60,6 +62,9 @@ function buildFilterQueryString(filters?: ProductFilterParams): string {
   }
   if (filters.sort_by) {
     params.append("sort_by", filters.sort_by);
+  }
+  if (filters.in_stock_only) {
+    params.append("in_stock_only", "true");
   }
   if (filters.page_number !== undefined) {
     params.append("page_number", filters.page_number.toString());
