@@ -113,6 +113,7 @@ interface ProductFiltersProps {
  * @param onShowFavoritesToggle - Callback when favorites toggle changes
  * @param totalFavorites - Total number of favorited products
  */
+<<<<<<< HEAD
 export function ProductFilters({
   onFilterChange,
   loading = false,
