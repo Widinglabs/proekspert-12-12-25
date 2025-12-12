@@ -21,8 +21,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { ProductFilters } from "@/components/ProductFilters";
 import { ProductGrid } from "@/components/ProductGrid";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { fetchProducts } from "@/lib/api-client";
 import { logger } from "@/lib/logger";
+import { ThemeProvider } from "@/lib/theme-provider";
 import { ApiError } from "@/types/error";
 import type { Product, ProductFilterParams } from "@/types/product";
 import "./index.css";
@@ -127,80 +129,87 @@ export function App() {
   }, [loadProducts]);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header section */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold">Product Catalog</h1>
-          <p className="text-muted-foreground mt-1">
-            {loading
-              ? "Loading products..."
-              : error
-                ? "Error loading products"
-                : `Browse our collection of ${products.length} products`}
-          </p>
-        </div>
-      </header>
-
-      {/* Main content area */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Filter controls */}
-        <ProductFilters onFilterChange={handleFilterChange} loading={loading} />
-
-        {/* Error state - show error message with retry button */}
-        {error ? (
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-destructive/10 border border-destructive text-destructive px-6 py-4 rounded-lg">
-              <div className="flex items-start gap-3">
-                {/* Error icon */}
-                <svg
-                  className="w-6 h-6 flex-shrink-0 mt-0.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                  role="img"
-                  aria-label="Error"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <div className="flex-1">
-                  <p className="font-semibold text-lg">Error loading products</p>
-                  <p className="text-sm mt-1">{error}</p>
-                  <button
-                    type="button"
-                    onClick={() => loadProducts(filters)}
-                    className="mt-3 text-sm underline hover:no-underline font-medium"
-                  >
-                    Try again
-                  </button>
-                </div>
+    <ThemeProvider>
+      <div className="min-h-screen bg-background">
+        {/* Header section */}
+        <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="container mx-auto px-4 py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold">Product Catalog</h1>
+                <p className="text-muted-foreground mt-1">
+                  {loading
+                    ? "Loading products..."
+                    : error
+                      ? "Error loading products"
+                      : `Browse our collection of ${products.length} products`}
+                </p>
               </div>
-            </div>
-
-            {/* Helpful debug info */}
-            <div className="mt-4 text-sm text-muted-foreground text-center">
-              <p>Make sure the backend server is running:</p>
-              <code className="block mt-1 bg-muted px-2 py-1 rounded text-xs">
-                cd app/backend && uv run python run_api.py
-              </code>
+              <ThemeToggle />
             </div>
           </div>
-        ) : (
-          // Success/Loading state - show product grid
-          <ProductGrid products={products} loading={loading} />
-        )}
-      </main>
+        </header>
 
-      {/* Footer */}
-      <footer className="border-t mt-12 py-6">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>Product Catalog API - Module 1 Exercise</p>
-        </div>
-      </footer>
-    </div>
+        {/* Main content area */}
+        <main className="container mx-auto px-4 py-8">
+          {/* Filter controls */}
+          <ProductFilters onFilterChange={handleFilterChange} loading={loading} />
+
+          {/* Error state - show error message with retry button */}
+          {error ? (
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-destructive/10 border border-destructive text-destructive px-6 py-4 rounded-lg">
+                <div className="flex items-start gap-3">
+                  {/* Error icon */}
+                  <svg
+                    className="w-6 h-6 flex-shrink-0 mt-0.5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                    role="img"
+                    aria-label="Error"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="font-semibold text-lg">Error loading products</p>
+                    <p className="text-sm mt-1">{error}</p>
+                    <button
+                      type="button"
+                      onClick={() => loadProducts(filters)}
+                      className="mt-3 text-sm underline hover:no-underline font-medium"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Helpful debug info */}
+              <div className="mt-4 text-sm text-muted-foreground text-center">
+                <p>Make sure the backend server is running:</p>
+                <code className="block mt-1 bg-muted px-2 py-1 rounded text-xs">
+                  cd app/backend && uv run python run_api.py
+                </code>
+              </div>
+            </div>
+          ) : (
+            // Success/Loading state - show product grid
+            <ProductGrid products={products} loading={loading} />
+          )}
+        </main>
+
+        {/* Footer */}
+        <footer className="border-t mt-12 py-6">
+          <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+            <p>Product Catalog API - Module 1 Exercise</p>
+          </div>
+        </footer>
+      </div>
+    </ThemeProvider>
   );
 }
 
