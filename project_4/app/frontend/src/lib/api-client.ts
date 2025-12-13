@@ -15,6 +15,7 @@
 
 import { ApiError, type ErrorResponse } from "@/types/error";
 import type { Product, ProductFilterParams, ProductListResponse } from "@/types/product";
+import type { Review, ReviewListResponse, ReviewSubmission } from "@/types/review";
 import { logger } from "./logger";
 
 /**
@@ -431,5 +432,223 @@ export async function fetchRelatedProducts(productId: number, limit: number = 4)
     });
 
     throw new Error(`Network error while fetching related products for ${productId}: ${errorMessage}`);
+  }
+}
+
+/**
+ * Fetch all reviews for a specific product.
+ *
+ * Backend endpoint: GET /api/reviews/{product_id}
+ * Response model: ReviewListResponse
+ *
+ * @param productId - ID of the product to fetch reviews for
+ * @returns ReviewListResponse with reviews, total count, and rating statistics
+ * @throws ApiError if backend returns error response (4xx/5xx)
+ * @throws Error if network failure or unable to reach backend
+ *
+ * Example usage:
+ * ```typescript
+ * try {
+ *   const reviewData = await fetchProductReviews(1);
+ *   console.log(`Average rating: ${reviewData.rating_stats.average_rating}`);
+ *   console.log(`Total reviews: ${reviewData.total_count}`);
+ * } catch (error) {
+ *   if (error instanceof ApiError) {
+ *     console.error(`API Error: ${error.errorResponse.error_code}`);
+ *   }
+ * }
+ * ```
+ */
+export async function fetchProductReviews(productId: number): Promise<ReviewListResponse> {
+  const endpoint = `/api/reviews/${productId}`;
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  logger.info("fetching_product_reviews", {
+    endpoint,
+    product_id: productId,
+    operation: "fetchProductReviews",
+  });
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    // Handle non-OK responses (4xx, 5xx)
+    if (!response.ok) {
+      let errorData: ErrorResponse;
+
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = {
+          error_code: "unknown_error",
+          error_message: `HTTP ${response.status}: ${response.statusText}`,
+          timestamp_utc: new Date().toISOString(),
+        };
+      }
+
+      logger.error("fetch_product_reviews_failed", {
+        endpoint,
+        product_id: productId,
+        status_code: response.status,
+        error_code: errorData.error_code,
+        error_message: errorData.error_message,
+        fix_suggestion: "Check if product_id is valid and backend is running",
+        operation: "fetchProductReviews",
+      });
+
+      throw new ApiError(response.status, errorData);
+    }
+
+    // Parse successful response
+    const data: ReviewListResponse = await response.json();
+
+    logger.info("product_reviews_fetched_successfully", {
+      endpoint,
+      product_id: productId,
+      total_reviews: data.total_count,
+      average_rating: data.rating_stats.average_rating,
+      operation: "fetchProductReviews",
+    });
+
+    return data;
+  } catch (error) {
+    // Re-throw ApiError as-is
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    // Handle network errors
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    logger.error("network_error", {
+      endpoint,
+      product_id: productId,
+      error_message: errorMessage,
+      error_type: "network_failure",
+      fix_suggestion: `Check that backend server is running at ${API_BASE_URL}`,
+      operation: "fetchProductReviews",
+    });
+
+    throw new Error(`Network error while fetching reviews: ${errorMessage}`);
+  }
+}
+
+/**
+ * Submit a new product review.
+ *
+ * Backend endpoint: POST /api/reviews
+ * Request model: ReviewSubmission
+ * Response model: Review (the created review)
+ *
+ * @param submission - ReviewSubmission data containing product_id, user_name, rating, and optional text
+ * @returns Created Review object
+ * @throws ApiError if submission fails (validation error or duplicate review)
+ * @throws Error if network failure
+ *
+ * Example usage:
+ * ```typescript
+ * try {
+ *   const newReview = await submitProductReview({
+ *     product_id: 1,
+ *     user_name: "John Doe",
+ *     review_rating: 5,
+ *     review_text: "Excellent product! Highly recommended."
+ *   });
+ *   console.log(`Review created with ID: ${newReview.review_id}`);
+ * } catch (error) {
+ *   if (error instanceof ApiError && error.statusCode === 409) {
+ *     console.error('You have already reviewed this product');
+ *   }
+ * }
+ * ```
+ */
+export async function submitProductReview(submission: ReviewSubmission): Promise<Review> {
+  const endpoint = "/api/reviews";
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  logger.info("submitting_product_review", {
+    endpoint,
+    product_id: submission.product_id,
+    user_name: submission.user_name,
+    rating: submission.review_rating,
+    has_text: !!submission.review_text,
+    operation: "submitProductReview",
+  });
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(submission),
+    });
+
+    // Handle non-OK responses (4xx, 5xx)
+    if (!response.ok) {
+      let errorData: ErrorResponse;
+
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = {
+          error_code: "unknown_error",
+          error_message: `HTTP ${response.status}: ${response.statusText}`,
+          timestamp_utc: new Date().toISOString(),
+        };
+      }
+
+      logger.error("submit_review_failed", {
+        endpoint,
+        product_id: submission.product_id,
+        user_name: submission.user_name,
+        status_code: response.status,
+        error_code: errorData.error_code,
+        error_message: errorData.error_message,
+        fix_suggestion:
+          response.status === 409
+            ? "User has already reviewed this product"
+            : "Check review data validation requirements",
+        operation: "submitProductReview",
+      });
+
+      throw new ApiError(response.status, errorData);
+    }
+
+    // Parse successful response
+    const data: Review = await response.json();
+
+    logger.info("review_submitted_successfully", {
+      endpoint,
+      review_id: data.review_id,
+      product_id: submission.product_id,
+      operation: "submitProductReview",
+    });
+
+    return data;
+  } catch (error) {
+    // Re-throw ApiError as-is
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    // Handle network errors
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    logger.error("network_error", {
+      endpoint,
+      product_id: submission.product_id,
+      error_message: errorMessage,
+      error_type: "network_failure",
+      fix_suggestion: `Check that backend server is running at ${API_BASE_URL}`,
+      operation: "submitProductReview",
+    });
+
+    throw new Error(`Network error while submitting review: ${errorMessage}`);
   }
 }

@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import products
+from app.api import products, reviews
 from app.core.config import settings
 from app.core.logging_config import StructuredLogger, setup_logging
 
@@ -73,6 +73,9 @@ if settings.enable_cors:
 # Register API routers
 app.include_router(products.router)
 logger.info("api_router_registered", router_prefix="/api/products", router_tag="products")
+
+app.include_router(reviews.router, prefix="/api")
+logger.info("api_router_registered", router_prefix="/api/reviews", router_tag="reviews")
 
 
 @app.get("/health")
